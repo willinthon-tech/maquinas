@@ -14,7 +14,7 @@ app.get('/', (req, res) => {
 });
 
 const db = mysql.createConnection({
-    host: 'localhost',
+    host: '66.97.43.124',
     user: 'root',      
     password: 'root',      
     database: 'sistema_maquinas' 
