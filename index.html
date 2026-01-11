@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventario Global de Maquinas</title>
+    <link rel="icon" type="image/png" href="/logo_wisi.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <meta name="theme-color" content="#1a1a27">
+    <style>
+        body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow: hidden; margin: 0; }
+        #view-login { height: 100vh; display: flex; align-items: center; justify-content: center; background: #1a1a27; }
+        .login-card { width: 360px; border-radius: 12px; border: none; }
+        #view-app { display: none; height: 100vh; width: 100%; }
+        #sidebar { width: 230px; background: #1a1a27; padding: 15px; flex-shrink: 0; display: flex; flex-direction: column; }
+        #sidebar .brand { color: white; text-align: center; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #2b2b40; padding-bottom: 15px; margin-bottom: 20px; font-size: 0.9rem; }
+        #sidebar a { color: #92929f; display: block; padding: 10px; text-decoration: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+        #sidebar a:hover, .active-link { background: #2b2b40; color: #009ef7 !important; }
+        .sidebar-user-info { padding: 12px 10px; text-align: center; border-top: 1px solid #2b2b40; margin-top: auto; background: #1e1e2d; border-radius: 8px; cursor: pointer; }
+        .user-name { color: white; font-size: 0.85rem; font-weight: 600; display: block; }
+        .user-level { color: #009ef7; font-size: 0.7rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px; }
+        .btn-logout { color: #f1416c !important; border: 1px solid #f1416c; font-size: 0.75rem; font-weight: bold; }
+        #main { flex-grow: 1; padding: 20px; overflow-y: auto; }
+        .table { font-size: 0.76rem; vertical-align: middle; }
+        .table thead th { background: #f1f1f4; text-transform: uppercase; font-size: 0.68rem; padding: 10px 5px; }
+        .report-summary-row td, .table tfoot td { background: #e1e3ea !important; padding: 10px 15px; font-size: 0.75rem; border-top: 2px solid #ced4da; }
+        .btn-action { padding: 3px 10px; font-size: 0.7rem; font-weight: 600; }
+        .filter-label { font-size: 0.65rem; font-weight: bold; color: #5e6278; text-transform: uppercase; }
+        .form-filter { font-size: 0.75rem; height: 32px; }
+        .detail-card { border: 1px solid #ebedef; border-radius: 6px; background: white; margin-bottom: 10px; }
+        .detail-card h6 { font-size: 0.7rem; font-weight: 800; background: #f4f4f7; padding: 10px; margin: 0; color: #009ef7; text-transform: uppercase; }
+        .is-invalid { border-color: #dc3545 !important; background-image: none !important; }
+        .feedback-error { color: #dc3545; font-size: 0.7rem; margin-top: 2px; font-weight: bold; display: none; }
+    </style>
+</head>
+<body>
+
+<div id="view-login">
+    <div class="card login-card p-4 text-center">
+        <h4 class="fw-bold">BIENVENIDO</h4>
+        <p class="text-muted small">Inventario Global de Maquinas</p>
+        <form id="formLogin">
+            <div class="text-start mb-3"><label class="filter-label">Usuario</label><input type="text" id="log-user" class="form-control" required></div>
+            <div class="text-start mb-3"><label class="filter-label">Clave</label><input type="password" id="log-pass" class="form-control" required></div>
+            <div id="loginError" class="alert alert-danger p-2 small mb-3" style="display:none;"></div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold">ENTRAR</button>
+        </form>
+    </div>
+</div>
+
+<div id="view-app">
+    <nav id="sidebar">
+        <div class="brand">Inventario Global<br>de Maquinas</div>
+        <a onclick="cambiarVista('maquina')" id="link-maquina">Máquinas</a>
+        <div id="menu-admin-only">
+            <hr style="border-color: #2b2b40;">
+            <a onclick="cambiarVista('grupo')" id="link-grupo">Grupos</a>
+            <a onclick="cambiarVista('sucursal')" id="link-sucursal">Sucursales</a>
+            <a onclick="cambiarVista('estado')" id="link-estado">Estados</a>
+            <a onclick="cambiarVista('sociedad')" id="link-sociedad">Sociedades</a>
+            <a onclick="cambiarVista('valor')" id="link-valor">Valores</a>
+            <a onclick="cambiarVista('juego')" id="link-juego">Juegos</a>
+            <a onclick="cambiarVista('marca')" id="link-marca">Marcas</a>
+            <a onclick="cambiarVista('modelo')" id="link-modelo">Modelos</a>
+        </div>
+        <div class="sidebar-user-info" onclick="irAVistaUsuarios()">
+            <span class="user-name" id="display-user-name">---</span>
+            <span class="user-level" id="display-user-level">---</span>
+            <a onclick="event.stopPropagation(); cerrarSesion();" class="btn btn-logout w-100 mt-2">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <main id="main">
+        <div id="section-lista">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 id="viewTitle" class="fw-bold m-0 text-dark">Máquinas</h5>
+                <button class="btn btn-success btn-action px-4" id="btn-nuevo-global" onclick="controladorAccionNuevo()">Nuevo Registro</button>
+            </div>
+            <div class="card mb-3" id="panelFiltros" style="display:none;">
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <div class="col-md-6"><label class="filter-label">Nombre</label><input type="text" id="f-nombre" class="form-control form-filter shadow-none"></div>
+                        <div class="col-md-6"><label class="filter-label">Serial</label><input type="text" id="f-serial" class="form-control form-filter shadow-none"></div>
+                        <div class="col-md-3"><label class="filter-label">Grupo</label><select id="f-grupo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Sala</label><select id="f-sucursal" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Marca</label><select id="f-marca" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Modelo</label><select id="f-modelo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Juego</label><select id="f-juego" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Estado</label><select id="f-estado" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Sociedad</label><select id="f-sociedad" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Valor</label><select id="f-valor" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-4 mt-3"><button class="btn btn-secondary btn-action w-100" onclick="resetFiltros()">Limpiar</button></div>
+                        <div class="col-md-4 mt-3"><button class="btn btn-warning btn-action w-100 fw-bold" onclick="exportarExcel()">Excel</button></div>
+                        <div class="col-md-4 mt-3"><button class="btn btn-primary btn-action w-100 fw-bold" onclick="window.print()">Imprimir</button></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card shadow-sm"><div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead id="tHead"><tr id="tHeadSummary" class="report-summary-row" style="display:none;"><td colspan="12"></td></tr><tr id="tHeadTitles" class="table-light"></tr></thead>
+                    <tbody id="tBody"></tbody><tfoot id="tFoot"></tfoot>
+                </table>
+            </div></div>
+        </div>
+        <div id="section-detalles" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-3"><h5>Análisis Detallado</h5><button class="btn btn-dark btn-sm" onclick="cerrarVistaDetalles()">Volver</button></div>
+            <div class="alert alert-primary py-2 x-small mb-3 shadow-sm" id="alertFiltrosDetalles"></div>
+            <div class="row g-3" id="containerTablasDetalles"></div>
+        </div>
+        <div id="section-formulario" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-3"><h5>Gestión</h5><button class="btn btn-sm btn-outline-secondary" onclick="cancelarFormulario()">Volver</button></div>
+            <div class="card"><div class="card-body"><form id="formMaquinaFull"><div class="row" id="camposMaquina"></div><hr><div class="text-end"><button type="submit" id="btnGuardarMaquina" class="btn btn-primary px-5">Guardar</button></div></form></div></div>
+        </div>
+    </main>
+</div>
+
+<div class="modal fade" id="modalParam" data-bs-backdrop="static"><div class="modal-dialog"><form id="formParam" class="modal-content"><div class="modal-header border-0"><h6>Nuevo Registro</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="modalFields"></div><div class="modal-footer border-0"><button type="submit" id="btnGuardarParam" class="btn btn-primary w-100">Guardar</button></div></form></div></div>
+
+<div class="modal fade" id="modalSucursales" data-bs-backdrop="static"><div class="modal-dialog"><div class="modal-content"><div class="modal-header border-0"><h6>Asignar Sucursales</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p class="small text-muted">Marque las sucursales permitidas para este usuario:</p><div id="containerSucursales" style="max-height: 350px; overflow-y: auto;"></div></div><div class="modal-footer border-0"><button onclick="guardarSucursales()" class="btn btn-primary w-100 fw-bold">Guardar Permisos</button></div></div></div></div>
+
+<div class="modal fade" id="modalConfirmarEliminar" data-bs-backdrop="static" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold">Confirmar</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><p class="small text-muted mb-0">¿Estás seguro de eliminar este registro?</p></div><div class="modal-footer border-0 justify-content-center"><button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger btn-sm px-4" id="btnConfirmarAccion">Sí, Eliminar</button></div></div></div></div>
+
+<div class="modal fade" id="modalErrorRelacion" data-bs-backdrop="static" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-header border-0 pb-0 text-danger"><h6 class="modal-title fw-bold">Acción Denegada</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><p class="small text-muted mb-0" id="msgErrorRelacion"></p></div><div class="modal-footer border-0"><button type="button" class="btn btn-dark btn-sm w-100" data-bs-dismiss="modal">Entendido</button></div></div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API = "http://localhost:3000/api";
+    let vista = "maquina", allData = [], editId = null, currentFiltered = [], usuarioActual = null, refreshInt = null;
+    let targetDelete = { id: null, tabla: null };
+    let tempUserId = null; 
+    let filtrosCargados = false; 
+
+    const modalParam = new bootstrap.Modal(document.getElementById('modalParam'));
+    const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
+    const modalError = new bootstrap.Modal(document.getElementById('modalErrorRelacion'));
+    const modalSucursales = new bootstrap.Modal(document.getElementById('modalSucursales'));
+
+    function aplicarPermisosUI() {
+        if(!usuarioActual) return;
+        document.getElementById('menu-admin-only').style.display = (usuarioActual.nivel == 1) ? 'block' : 'none';
+        document.getElementById('btn-nuevo-global').style.display = (usuarioActual.nivel == 3) ? 'none' : 'block';
+    }
+    function verificarSesion() {
+        const stored = localStorage.getItem('usuarioInventario');
+        if (stored) {
+            usuarioActual = JSON.parse(stored);
+            document.getElementById('view-login').style.display = 'none';
+            document.getElementById('view-app').style.display = 'flex';
+            actualizarInterfazPerfil();
+            cambiarVista('maquina');
+            iniciarRealTime();
+        } else {
+            detenerRealTime();
+            document.getElementById('view-login').style.display = 'flex';
+            document.getElementById('view-app').style.display = 'none';
+        }
+    }
+    function actualizarInterfazPerfil() {
+        const lvls = {1:'Administrador', 2:'Supervisor', 3:'Normal'};
+        document.getElementById('display-user-name').innerText = usuarioActual.nombre;
+        document.getElementById('display-user-level').innerText = lvls[usuarioActual.nivel] || 'Usuario';
+    }
+    function irAVistaUsuarios() { if(usuarioActual.nivel == 1) cambiarVista('usuario'); }
+    function iniciarRealTime() {
+        if(refreshInt) clearInterval(refreshInt);
+        refreshInt = setInterval(async () => {
+            if(!document.querySelector('.modal.show') && document.getElementById('section-formulario').style.display === 'none') {
+                await cargarTabla();
+                sincronizarUsuarioLogueado();
+                if(document.getElementById('section-detalles').style.display === 'block') abrirVistaDetalles(true);
+            }
+        }, 5000);
+    }
+    async function sincronizarUsuarioLogueado() {
+        try {
+            const res = await fetch(`${API}/usuario/${usuarioActual.id}`);
+            const data = await res.json();
+            if(data.id) { usuarioActual = data; localStorage.setItem('usuarioInventario', JSON.stringify(data)); actualizarInterfazPerfil(); }
+        } catch(e) {}
+    }
+    function detenerRealTime() { if(refreshInt) clearInterval(refreshInt); }
+
+    // --- CARGA DE TABLA CON ID DE USUARIO PARA FILTRADO ---
+    async function cargarTabla() {
+        const res = await fetch(`${API}/${vista}?userId=${usuarioActual.id}`);
+        const data = await res.json();
+        allData = Array.isArray(data) ? data : [];
+        
+        if (vista === 'maquina') {
+            if (!filtrosCargados) {
+                // Para llenar los selects de FILTRO iniciales, también usamos la data filtrada
+                actualizarDropdownsDinamicos(allData);
+                filtrosCargados = true;
+            }
+            aplicarFiltros(); 
+        } else {
+            renderizarTabla(allData);
+        }
+    }
+
+    function aplicarFiltros() {
+        if (vista !== 'maquina') return;
+        
+        const rawNombre = document.getElementById('f-nombre')?.value || "";
+        const rawSerial = document.getElementById('f-serial')?.value || "";
+        const fNombre = rawNombre.toLowerCase();
+        const fSerial = rawSerial.toLowerCase();
+        
+        const getS = (id) => document.getElementById(id)?.value || "";
+        const f = {
+            Grupo: getS('f-grupo'), Sala: getS('f-sucursal'), Marca: getS('f-marca'),
+            Modelo: getS('f-modelo'), Juego: getS('f-juego'), Estado: getS('f-estado'),
+            Sociedad: getS('f-sociedad'), Valor: getS('f-valor')
+        };
+
+        const dataSoloSelects = allData.filter(m => 
+            (f.Grupo === "" || m.grupo_nom === f.Grupo) &&
+            (f.Sala === "" || m.sala_nom === f.Sala) &&
+            (f.Marca === "" || m.marca_nom === f.Marca) &&
+            (f.Modelo === "" || m.modelo_nom === f.Modelo) &&
+            (f.Juego === "" || m.juego_nom === f.Juego) &&
+            (f.Estado === "" || m.estado_nom === f.Estado) &&
+            (f.Sociedad === "" || m.sociedad_nom === f.Sociedad) &&
+            (f.Valor === "" || m.valor_nom === f.Valor)
+        );
+
+        currentFiltered = dataSoloSelects.filter(m => 
+            (m.nombre.toLowerCase().includes(fNombre)) && 
+            (m.serial.toLowerCase().includes(fSerial))
+        );
+
+        renderizarTabla(currentFiltered);
+        actualizarDropdownsDinamicos(dataSoloSelects);
+        generarResumenReporte(currentFiltered.length, { ...f, Nombre: rawNombre, Serial: rawSerial });
+    }
+
+    function renderizarTabla(data) {
+        const titles = document.getElementById('tHeadTitles'), body = document.getElementById('tBody');
+        const styleAcc = (usuarioActual.nivel == 3) ? 'display:none' : '';
+        if(vista === 'maquina') {
+            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th class="text-center" style="${styleAcc}">Acciones</th>`;
+            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td><b>${i.nombre}</b></td><td><span class="badge bg-dark">${i.serial}</span></td><td>${i.grupo_nom || '-'}</td><td>${i.sala_nom || '-'}</td><td>${i.marca_nom || '-'}</td><td>${i.modelo_nom || '-'}</td><td>${i.juego_nom || '-'}</td><td>${i.estado_nom || '-'}</td><td>${i.sociedad_nom || '-'}</td><td>${i.valor_nom || '-'}</td><td class="text-center" style="${styleAcc}"><button onclick="abrirEditorMaquina(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, 'maquina')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
+        } else if (vista === 'sucursal' || vista === 'modelo') {
+            const padre = (vista === 'sucursal') ? 'Grupo' : 'Marca';
+            const nomPadre = (vista === 'sucursal') ? 'grupo_nom' : 'marca_nom';
+            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>${padre}</th><th class="text-center">Acciones</th>`;
+            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td>${i.nombre}</td><td><span class="badge bg-light text-dark border">${i[nomPadre] || '-'}</span></td><td class="text-center"><button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, '${vista}')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
+        } else if (vista === 'usuario') {
+            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Usuario</th><th>Nivel</th><th class="text-center">Acciones</th>`;
+            body.innerHTML = data.map(i => { 
+                const l = {1:'Admin', 2:'Supervisor', 3:'Normal'}; 
+                return `<tr>
+                    <td>${i.id}</td>
+                    <td>${i.nombre}</td>
+                    <td>${i.usuario}</td>
+                    <td><span class="badge bg-info text-dark">${l[i.nivel]}</span></td>
+                    <td class="text-center">
+                        <button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button>
+                        <button onclick="abrirModalSucursales(${i.id})" class="btn btn-outline-warning btn-action ms-1">Sucursales</button>
+                        ${(i.usuario === 'willinthon') ? '<button class="btn btn-outline-secondary btn-action ms-1" disabled>Lock</button>' : `<button onclick="solicitarEliminar(${i.id}, 'usuario')" class="btn btn-outline-danger btn-action ms-1">Borrar</button>`}
+                    </td>
+                </tr>`; 
+            }).join('');
+        } else {
+            titles.innerHTML = `<th>ID</th><th>Nombre</th><th class="text-center">Acciones</th>`;
+            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td>${i.nombre}</td><td class="text-center"><button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, '${vista}')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
+        }
+    }
+
+    function activarValidacionEnInput(selectorInput, tabla, campo, btnGuardarId, idRegistro = null) {
+        const input = document.querySelector(selectorInput);
+        if (!input) return;
+
+        if(input.parentNode.querySelector('.feedback-error')){
+            input.parentNode.querySelector('.feedback-error').remove();
+        }
+        let errorMsg = document.createElement('div');
+        errorMsg.className = 'feedback-error';
+        errorMsg.innerText = `Este ${campo} ya existe en la base de datos.`;
+        input.parentNode.appendChild(errorMsg);
+        
+        const btn = document.getElementById(btnGuardarId);
+        input.classList.remove('is-invalid');
+        errorMsg.style.display = 'none';
+        if(btn) btn.disabled = false;
+
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+
+        const activeInput = document.querySelector(selectorInput);
+        if(!activeInput.parentNode.querySelector('.feedback-error')) {
+             activeInput.parentNode.appendChild(errorMsg);
+        }
+
+        activeInput.addEventListener('keyup', async () => {
+            const valor = activeInput.value.trim();
+            if (valor.length < 2) {
+                 activeInput.classList.remove('is-invalid');
+                 errorMsg.style.display = 'none';
+                 if(btn) btn.disabled = false;
+                 return; 
+            }
+
+            try {
+                let url = `${API}/validar/${tabla}/${campo}/${valor}`;
+                if(idRegistro) {
+                    url += `?excludeId=${idRegistro}`;
+                }
+
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.existe) {
+                    activeInput.classList.add('is-invalid');
+                    errorMsg.style.display = 'block';
+                    if(btn) btn.disabled = true;
+                } else {
+                    activeInput.classList.remove('is-invalid');
+                    errorMsg.style.display = 'none';
+                    if(btn) btn.disabled = false;
+                }
+            } catch (e) { console.error(e); }
+        });
+    }
+
+    async function abrirModalSucursales(userId) {
+        tempUserId = userId;
+        const container = document.getElementById('containerSucursales');
+        container.innerHTML = `<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div><span class="ms-2 small text-muted">Cargando datos...</span></div>`;
+        modalSucursales.show();
+
+        try {
+            const resAll = await fetch(`${API}/options/sucursal`);
+            const resPerm = await fetch(`${API}/permisos_sucursal/${userId}`);
+            
+            if (!resAll.ok || !resPerm.ok) throw new Error("Error al obtener datos");
+
+            const allSuc = await resAll.json();
+            const userPerms = await resPerm.json();
+
+            if(allSuc.length === 0){ container.innerHTML = '<p class="text-muted text-center small">No hay sucursales registradas.</p>'; return; }
+
+            let html = '';
+            allSuc.sort((a,b) => a.nombre.localeCompare(b.nombre));
+
+            allSuc.forEach(s => {
+                const isChecked = userPerms.includes(s.id) ? 'checked' : '';
+                const label = s.parent_nom ? `<b>${s.nombre}</b> <span class="text-muted">(${s.parent_nom})</span>` : `<b>${s.nombre}</b>`;
+                html += `<div class="form-check border-bottom py-2 m-0"><input class="form-check-input chk-sucursal" type="checkbox" value="${s.id}" id="chk_${s.id}" ${isChecked}><label class="form-check-label small w-100" for="chk_${s.id}" style="cursor:pointer">${label}</label></div>`;
+            });
+            container.innerHTML = html;
+        } catch(e) { container.innerHTML = '<p class="text-danger small text-center">Error de conexión.</p>'; }
+    }
+
+    async function guardarSucursales() {
+        const btn = document.querySelector('#modalSucursales .btn-primary');
+        const originalText = btn.innerText;
+        btn.innerText = "Guardando...";
+        btn.disabled = true;
+
+        try {
+            const checkedBoxes = document.querySelectorAll('.chk-sucursal:checked');
+            const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+            const res = await fetch(`${API}/asignar_sucursales`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ usuario_id: tempUserId, sucursales: selectedIds })
+            });
+
+            if(res.ok) {
+                modalSucursales.hide();
+            } else {
+                alert("Error al guardar los permisos en el servidor.");
+            }
+
+        } catch(e) { alert("Error de conexión."); } finally { btn.innerText = originalText; btn.disabled = false; }
+    }
+
+    function actualizarDropdownsDinamicos(data) {
+        const conf = {'f-grupo':'grupo_nom','f-sucursal':'sala_nom','f-marca':'marca_nom','f-modelo':'modelo_nom','f-juego':'juego_nom','f-estado':'estado_nom','f-sociedad':'sociedad_nom','f-valor':'valor_nom'};
+        
+        Object.keys(conf).forEach(id => { 
+            const s = document.getElementById(id); 
+            if(!s) return; 
+
+            if(document.activeElement === s) return; 
+
+            const v = s.value; 
+            const u = [...new Set(data.map(i => i[conf[id]]))].filter(x => x).sort(); 
+            s.innerHTML = '<option value="">TODOS</option>' + u.map(x => `<option value="${x}" ${x==v?'selected':''}>${x}</option>`).join(''); 
+        });
+    }
+
+    function generarResumenReporte(total, filtros) {
+        if (vista !== 'maquina') return;
+        let aplicados = []; 
+        for (const [k, v] of Object.entries(filtros)) { 
+            if (v !== "") {
+                aplicados.push(`${k}: ${v}`); 
+            }
+        }
+        let txt = `Máquinas totales: ( <b>${total}</b> )`; if (aplicados.length > 0) txt += `, Filtros Totales: ( <b>${aplicados.length}</b> ), Filtros: ( ${aplicados.join(', ')} )`;
+        const content = `<div class="d-flex align-items-center justify-content-between w-100"><div>${txt}</div><div><button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles Estadísticos</button></div></div>`;
+        document.getElementById('tFoot').innerHTML = `<tr><td colspan="12">${content}</td></tr>`;
+        document.getElementById('tHeadSummary').style.display = 'table-row'; document.getElementById('tHeadSummary').cells[0].innerHTML = content;
+        document.getElementById('alertFiltrosDetalles').innerHTML = txt;
+    }
+    
+    function abrirVistaDetalles(isRefresh = false) {
+        if(!isRefresh) { document.getElementById('section-lista').style.display = 'none'; document.getElementById('section-detalles').style.display = 'block'; }
+        const cont = document.getElementById('containerTablasDetalles'); cont.innerHTML = "";
+        const cats = [{ label: 'Grupos', key: 'grupo_nom' }, { label: 'Salas', key: 'sala_nom' }, { label: 'Marcas', key: 'marca_nom' }, { label: 'Modelos', key: 'modelo_nom' }, { label: 'Juegos', key: 'juego_nom' }, { label: 'Estados', key: 'estado_nom' }, { label: 'Sociedades', key: 'sociedad_nom' }, { label: 'Valores', key: 'valor_nom' }];
+        cats.forEach(c => {
+            const count = {}; currentFiltered.forEach(m => { let l = (c.key === 'modelo_nom') ? `${m.modelo_nom || 'N/A'} (${m.marca_nom || 'N/A'})` : (c.key === 'sala_nom') ? `${m.sala_nom || 'N/A'} (${m.grupo_nom || 'N/A'})` : m[c.key] || 'N/A'; count[l] = (count[l] || 0) + 1; });
+            const sorted = Object.entries(count).sort((a,b) => b[1] - a[1]);
+            cont.innerHTML += `<div class="col-md-3"><div class="card detail-card shadow-sm"><h6>${c.label}</h6><table class="table detail-table table-sm table-hover mb-0"><tbody>${sorted.map(([n, ct]) => `<tr><td>${n}</td><td class="text-center fw-bold text-primary" style="width:40px">${ct}</td></tr>`).join('')}</tbody></table></div></div>`;
+        });
+    }
+    function cambiarVista(v) {
+        vista = v; 
+        document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active-link'));
+        const link = document.getElementById(`link-${v}`); if(link) link.classList.add('active-link');
+        document.getElementById('viewTitle').innerText = (v === 'maquina') ? 'Inventario de Máquinas' : v;
+        document.getElementById('panelFiltros').style.display = (v === 'maquina') ? 'block' : 'none';
+        document.getElementById('tHeadSummary').style.display = 'none'; document.getElementById('tFoot').innerHTML = "";
+        
+        filtrosCargados = false; 
+
+        aplicarPermisosUI(); cancelarFormulario(); cerrarVistaDetalles(); cargarTabla();
+    }
+    async function abrirModalParametro(id = null) {
+        editId = id; const container = document.getElementById('modalFields');
+        let current = id ? await (await fetch(`${API}/${vista}/${id}`)).json() : {};
+        let html = '';
+        if (vista === 'usuario') {
+            const isW = (current.usuario === 'willinthon');
+            html = `<div class="mb-2"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div>
+                    <div class="mb-2"><label class="filter-label">Usuario</label><input type="text" name="usuario" class="form-control" value="${current.usuario || ''}" required ${isW ? 'disabled' : ''}></div>
+                    <div class="mb-2"><label class="filter-label">Clave</label><input type="password" name="clave" class="form-control" value="${current.clave || ''}" required></div>
+                    <div class="mb-2"><label class="filter-label">Nivel</label><select name="nivel" class="form-select" ${isW ? 'disabled' : ''}><option value="1" ${current.nivel==1?'selected':''}>Admin</option><option value="2" ${current.nivel==2?'selected':''}>Supervisor</option><option value="3" ${current.nivel==3?'selected':''}>Normal</option></select></div>
+                    ${isW ? '<input type="hidden" name="usuario" value="willinthon"><input type="hidden" name="nivel" value="1">' : ''}`;
+        } else {
+            const d = {'sucursal':[{l:'Grupo',t:'grupo',f:'grupo_id'}],'modelo':[{l:'Marca',t:'marca',f:'marca_id'}]};
+            html = `<div class="mb-3"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div>`;
+            if (d[vista]) { for (let x of d[vista]) { const o = await (await fetch(`${API}/options/${x.t}`)).json(); html += `<div class="mb-3"><label class="filter-label">${x.l}</label><select name="${x.f}" class="form-select" required><option value="">--</option>${o.map(opt => `<option value="${opt.id}" ${current[x.f] == opt.id ? 'selected' : ''}>${opt.nombre}</option>`).join('')}</select></div>`; } }
+        }
+        container.innerHTML = html; 
+        
+        if(vista === 'usuario') { 
+             activarValidacionEnInput('input[name="usuario"]', 'usuario', 'usuario', 'btnGuardarParam', id);
+        }
+
+        modalParam.show();
+    }
+    
+    // --- ENVIO DE ID AL ABRIR EDITOR PARA QUE SOLO TRAIGA SUCURSALES PERMITIDAS ---
+    async function abrirEditorMaquina(id = null) {
+        editId = id; document.getElementById('section-lista').style.display = 'none'; document.getElementById('section-formulario').style.display = 'block';
+        const container = document.getElementById('camposMaquina');
+        let current = id ? await (await fetch(`${API}/maquina/${id}`)).json() : {};
+        let html = `<div class="col-md-6 mb-2"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div><div class="col-md-6 mb-2"><label class="filter-label">Serial</label><input type="text" name="serial" class="form-control" value="${current.serial || ''}" required></div>`;
+        const dMaq = [{ label: 'Sala / Grupo', table: 'sucursal', fk: 'sucursal_id', grouped: true }, { label: 'Marca / Modelo', table: 'modelo', fk: 'modelo_id', grouped: true }, { label: 'Juego', table: 'juego', fk: 'juego_id' }, { label: 'Estado', table: 'estado', fk: 'estado_id' }, { label: 'Sociedad', table: 'sociedad', fk: 'sociedad_id' }, { label: 'Valor', table: 'valor', fk: 'valor_id' }];
+        
+        for (let d of dMaq) {
+            const opts = await (await fetch(`${API}/options/${d.table}?userId=${usuarioActual.id}`)).json();
+            
+            html += `<div class="col-md-4 mb-2"><label class="filter-label">${d.label}</label><select name="${d.fk}" class="form-select" required><option value="">--</option>`;
+            if (d.grouped) { const g = {}; opts.forEach(o => { const p = o.parent_nom || 'Otros'; if (!g[p]) g[p] = []; g[p].push(o); }); for (const p in g) { html += `<optgroup label="${p.toUpperCase()}">`; g[p].forEach(o => { html += `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`; }); html += `</optgroup>`; }
+            } else { html += opts.map(o => `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`).join(''); } html += `</select></div>`;
+        }
+        container.innerHTML = html;
+        activarValidacionEnInput('input[name="serial"]', 'maquina', 'serial', 'btnGuardarMaquina', id);
+    }
+    
+    document.getElementById('formLogin').onsubmit = async (e) => { e.preventDefault(); try { const res = await fetch(`${API}/login`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ usuario: document.getElementById('log-user').value, clave: document.getElementById('log-pass').value }) }); const data = await res.json(); if (data.success) { localStorage.setItem('usuarioInventario', JSON.stringify(data.user)); verificarSesion(); } else { const err = document.getElementById('loginError'); err.innerText = data.message; err.style.display = 'block'; } } catch(e) { alert("Error de conexión con el servidor"); } };
+    document.getElementById('formParam').onsubmit = async (e) => { e.preventDefault(); await fetch(editId ? `${API}/${vista}/${editId}` : `${API}/${vista}`, { method: editId ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(e.target))) }); modalParam.hide(); cargarTabla(); };
+    document.getElementById('formMaquinaFull').onsubmit = async (e) => { e.preventDefault(); await fetch(editId ? `${API}/maquina/${editId}` : `${API}/maquina`, { method: editId ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(e.target))) }); cancelarFormulario(); cargarTabla(); };
+
+    function solicitarEliminar(id, tabla) {
+        targetDelete = { id, tabla };
+        modalConfirm.show();
+    }
+    
+    document.getElementById('btnConfirmarAccion').onclick = async () => {
+        const res = await fetch(`${API}/${targetDelete.tabla}/${targetDelete.id}`, { method: 'DELETE' });
+        modalConfirm.hide();
+
+        if (res.status === 409) {
+            const data = await res.json();
+            document.getElementById('msgErrorRelacion').innerText = data.message;
+            setTimeout(() => modalError.show(), 300);
+        } else if (res.ok) {
+            cargarTabla();
+        } else {
+            alert("Error desconocido al eliminar");
+        }
+    };
+
+    function cerrarSesion() { 
+        localStorage.removeItem('usuarioInventario'); 
+        usuarioActual = null;
+        document.getElementById('view-app').style.display = 'none';
+        document.getElementById('view-login').style.display = 'flex';
+        document.getElementById('log-user').value = "";
+        document.getElementById('log-pass').value = "";
+    }
+
+    function cancelarFormulario() { document.getElementById('section-formulario').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
+    function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
+    function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
+    function controladorAccionNuevo() { if(vista === 'maquina') abrirEditorMaquina(); else abrirModalParametro(); }
+    function exportarExcel() { const ws = XLSX.utils.json_to_sheet(currentFiltered.map(m => ({ "Nombre": m.nombre, "Serial": m.serial, "Grupo": m.grupo_nom, "Sala": m.sala_nom, "Marca": m.marca_nom, "Modelo": m.modelo_nom, "Juego": m.juego_nom, "Estado": m.estado_nom, "Sociedad": m.sociedad_nom, "Valor": m.valor_nom }))); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventario"); XLSX.writeFile(wb, "Inventario.xlsx"); }
+    document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
+    
+    verificarSesion();
+</script>
+</body>
+</html>

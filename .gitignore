@@ -1,0 +1,14 @@
+# Dependencias del proyecto (Lo más importante)
+node_modules/
+
+# Archivos de logs de errores (Opcional pero recomendado)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de variables de entorno (Para seguridad, no subir claves)
+.env
+
+# Archivos del sistema operativo (Basura de Mac/Windows)
+.DS_Store
+Thumbs.db

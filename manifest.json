@@ -1,0 +1,16 @@
+{
+  "name": "Inventario Global de Maquinas",
+  "short_name": "WISI Inv",
+  "description": "Sistema de Inventario WISI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a27",
+  "theme_color": "#009ef7",
+  "icons": [
+    {
+      "src": "/logo_wisi.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
