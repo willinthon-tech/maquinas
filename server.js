@@ -71,24 +71,48 @@ app.post('/api/asignar_sucursales', (req, res) => {
     });
 });
 
+// --- CORRECCIÓN CRÍTICA AQUÍ ---
 app.get('/api/options/:tabla', (req, res) => {
     const { tabla } = req.params;
     const { userId } = req.query; 
-    let sql = `SELECT * FROM ${tabla} ORDER BY nombre`;
+
     if (tabla === 'sucursal') {
-        if (userId) {
-            sql = `SELECT s.id, s.nombre, g.nombre as parent_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id INNER JOIN usuario_sucursal us ON s.id = us.sucursal_id WHERE us.usuario_id = ${mysql.escape(userId)} ORDER BY g.nombre, s.nombre`;
+        if (userId && userId !== 'undefined' && userId !== 'null') {
+            // Si viene userId, filtramos por lo que ese usuario tiene permitido (Vista Máquinas)
+            const sql = `SELECT s.id, s.nombre, g.nombre as parent_nom 
+                         FROM sucursal s 
+                         LEFT JOIN grupo g ON s.grupo_id = g.id 
+                         INNER JOIN usuario_sucursal us ON s.id = us.sucursal_id
+                         WHERE us.usuario_id = ${mysql.escape(userId)}
+                         ORDER BY g.nombre, s.nombre`;
+            db.query(sql, (err, results) => {
+                if (err) return res.status(500).send(err);
+                res.json(results);
+            });
         } else {
-            sql = `SELECT s.id, s.nombre, g.nombre as parent_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY g.nombre, s.nombre`;
+            // SI NO VIENE userId, TRAEMOS TODAS (Gestión de Usuarios / Admin)
+            const sql = `SELECT s.id, s.nombre, g.nombre as parent_nom 
+                         FROM sucursal s 
+                         LEFT JOIN grupo g ON s.grupo_id = g.id 
+                         ORDER BY g.nombre, s.nombre`;
+            db.query(sql, (err, results) => {
+                if (err) return res.status(500).send(err);
+                res.json(results);
+            });
         }
+    } else if (tabla === 'modelo') {
+        const sql = `SELECT m.id, m.nombre, ma.nombre as parent_nom FROM modelo m LEFT JOIN marca ma ON m.marca_id = ma.id ORDER BY ma.nombre, m.nombre`;
+        db.query(sql, (err, results) => {
+            if (err) return res.status(500).send(err);
+            res.json(results);
+        });
+    } else {
+        const sql = `SELECT * FROM ${tabla} ORDER BY nombre`;
+        db.query(sql, (err, results) => {
+            if (err) return res.status(500).send(err);
+            res.json(results);
+        });
     }
-    if (tabla === 'modelo') {
-        sql = `SELECT m.id, m.nombre, ma.nombre as parent_nom FROM modelo m LEFT JOIN marca ma ON m.marca_id = ma.id ORDER BY ma.nombre, m.nombre`;
-    }
-    db.query(sql, (err, results) => {
-        if (err) return res.status(500).send(err);
-        res.json(results);
-    });
 });
 
 app.get('/api/:tabla', (req, res) => {
@@ -97,7 +121,9 @@ app.get('/api/:tabla', (req, res) => {
     let sql = "";
     if (tabla === 'maquina') {
         sql = `SELECT m.*, g.nombre as grupo_nom, s.nombre as sala_nom, ma.nombre as marca_nom, mo.nombre as modelo_nom, j.nombre as juego_nom, e.nombre as estado_nom, so.nombre as sociedad_nom, v.nombre as valor_nom FROM maquina m LEFT JOIN sucursal s ON m.sucursal_id = s.id LEFT JOIN grupo g ON s.grupo_id = g.id LEFT JOIN modelo mo ON m.modelo_id = mo.id LEFT JOIN marca ma ON mo.marca_id = ma.id LEFT JOIN juego j ON m.juego_id = j.id LEFT JOIN estado e ON m.estado_id = e.id LEFT JOIN sociedad so ON m.sociedad_id = so.id LEFT JOIN valor v ON m.valor_id = v.id`;
-        if (userId) { sql += ` INNER JOIN usuario_sucursal us ON m.sucursal_id = us.sucursal_id WHERE us.usuario_id = ${mysql.escape(userId)}`; }
+        if (userId && userId !== 'undefined') { 
+            sql += ` INNER JOIN usuario_sucursal us ON m.sucursal_id = us.sucursal_id WHERE us.usuario_id = ${mysql.escape(userId)}`; 
+        }
     } else if (tabla === 'sucursal') {
         sql = "SELECT s.*, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id";
     } else if (tabla === 'modelo') { 
