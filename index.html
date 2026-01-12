@@ -303,11 +303,14 @@
         container.innerHTML = `<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div><span class="ms-2 small text-muted">Cargando datos...</span></div>`;
         modalSucursales.show();
         try {
-            const resAll = await fetch(`${API}/options/sucursal?userId=${usuarioActual.id}`);
+            // CORRECCIÓN: Quitamos el userId para cargar TODAS las sucursales existentes
+            const resAll = await fetch(`${API}/options/sucursal`);
             const resPerm = await fetch(`${API}/permisos_sucursal/${userId}`);
+            
             if (!resAll.ok || !resPerm.ok) throw new Error("Error al obtener datos");
             const allSuc = await resAll.json();
             const userPerms = await resPerm.json();
+            
             if(allSuc.length === 0){ container.innerHTML = '<p class="text-muted text-center small">No hay sucursales registradas.</p>'; return; }
             let html = '';
             allSuc.sort((a,b) => a.nombre.localeCompare(b.nombre));

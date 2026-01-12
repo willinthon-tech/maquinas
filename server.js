@@ -13,7 +13,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// CONFIGURACIÓN DE BASE DE DATOS - Corregido a localhost
+// CONFIGURACIÓN DE BASE DE DATOS
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',      
@@ -22,11 +22,8 @@ const db = mysql.createConnection({
 });
 
 db.connect((err) => {
-    if (err) {
-        console.error('Error conectando a la BD Local:', err);
-    } else {
-        console.log('Conectado exitosamente a MySQL en Localhost');
-    }
+    if (err) console.error('Error BD:', err);
+    else console.log('Conectado exitosamente a MySQL en Localhost');
 });
 
 // --- RUTAS API ---
