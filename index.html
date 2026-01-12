@@ -2,126 +2,49 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario Wisi</title>
-    
+    <title>Inventario Global de Maquinas</title>
     <link rel="icon" type="image/png" href="/logo_wisi.png">
-    <link rel="apple-touch-icon" href="/logo_wisi.png">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#1a1a27">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
+    <meta name="theme-color" content="#1a1a27">
     <style>
-        :root {
-            --bg-dark: #1a1a27;
-            --bg-body: #f4f7f6;
-            --accent: #009ef7;
-            --sidebar-width: 240px;
-        }
-
-        body { background: var(--bg-body); font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; overflow: hidden; }
-
-        /* LOGIN RESPONSIVO */
-        #view-login { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-dark); padding: 20px; }
-        .login-card { width: 100%; max-width: 380px; border-radius: 16px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
-
-        /* ESTRUCTURA PRINCIPAL */
-        #view-app { display: none; height: 100vh; width: 100%; flex-direction: row; }
-
-        /* SIDEBAR */
-        #sidebar { 
-            width: var(--sidebar-width); background: var(--bg-dark); padding: 20px 15px; 
-            flex-shrink: 0; display: flex; flex-direction: column; transition: transform 0.3s ease; 
-            z-index: 1050;
-        }
-        #sidebar .brand { color: white; text-align: center; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #2b2b40; padding-bottom: 20px; margin-bottom: 20px; font-size: 1rem; letter-spacing: 1px; }
-        #sidebar a { color: #92929f; display: block; padding: 12px 15px; text-decoration: none; border-radius: 8px; font-size: 0.9rem; cursor: pointer; margin-bottom: 4px; }
-        #sidebar a:hover, .active-link { background: #2b2b40; color: var(--accent) !important; font-weight: 600; }
-        
-        .sidebar-user-info { padding: 15px; text-align: center; border-top: 1px solid #2b2b40; margin-top: auto; background: #1e1e2d; border-radius: 12px; cursor: pointer; }
-        .user-name { color: white; font-size: 0.9rem; font-weight: 600; display: block; }
-        .user-level { color: var(--accent); font-size: 0.75rem; text-transform: uppercase; font-weight: 800; display: block; margin-bottom: 8px; }
-        .btn-logout { color: #f1416c !important; border: 1px solid #f1416c; font-size: 0.8rem; font-weight: bold; padding: 8px; }
-
-        /* CONTENIDO PRINCIPAL */
-        #main { flex-grow: 1; padding: 25px; overflow-y: auto; width: 100%; }
-        
-        /* TABLAS CON SCROLL MOVIL */
-        .table-wrap { 
-            background: white; border-radius: 12px; overflow-x: auto; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e1e3ea;
-        }
-        .table { font-size: 0.8rem; vertical-align: middle; margin-bottom: 0; min-width: 850px; }
-        .table thead th { background: #f8f9fa; color: #5e6278; font-weight: 700; text-transform: uppercase; font-size: 0.7rem; padding: 15px 10px; border-bottom: 2px solid #f1f1f4; }
-        .table tbody td { padding: 12px 10px; border-bottom: 1px solid #f1f1f4; }
-
-        /* HEADER PARA MOVILES */
-        #mobile-nav { 
-            display: none; background: var(--bg-dark); color: white; padding: 12px 20px; 
-            align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1040;
-        }
-
-        /* FILTROS RESPONSIVOS */
-        .filter-label { font-size: 0.65rem; font-weight: 800; color: #7e8299; text-transform: uppercase; margin-bottom: 5px; }
-        .form-filter { font-size: 0.85rem; height: 42px; border: 1px solid #dbdfe9; background-color: #ffffff; }
-
-        /* DISEÑO DE DETALLES (CARDS) */
-        .detail-card { border: none; border-radius: 12px; background: white; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); overflow: hidden; }
-        .detail-card h6 { font-size: 0.75rem; font-weight: 800; background: #f1f1f4; padding: 12px; margin: 0; color: #181c32; text-transform: uppercase; border-bottom: 1px solid #e1e3ea; }
-
-        /* VALIDACIONES */
-        .is-invalid { border-color: #f1416c !important; }
-        .feedback-error { color: #f1416c; font-size: 0.7rem; margin-top: 4px; font-weight: 600; display: none; }
-
-        /* MEDIA QUERIES */
-        @media (max-width: 992px) {
-            #view-app { flex-direction: column; }
-            #mobile-nav { display: flex; }
-            #sidebar { 
-                position: fixed; left: 0; transform: translateX(-100%); 
-                top: 56px; bottom: 0; width: 280px; 
-            }
-            #sidebar.show { transform: translateX(0); }
-            #main { padding: 15px; height: calc(100vh - 56px); }
-            .col-md-3, .col-md-6, .col-md-4 { width: 50%; }
-            .btn-nuevo-global { width: 100%; margin-top: 5px; }
-        }
-
-        @media (max-width: 576px) {
-            .col-md-3, .col-md-6 { width: 100%; }
-            .user-name { font-size: 0.8rem; }
-        }
+        body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow: hidden; margin: 0; }
+        #view-login { height: 100vh; display: flex; align-items: center; justify-content: center; background: #1a1a27; }
+        .login-card { width: 360px; border-radius: 12px; border: none; }
+        #view-app { display: none; height: 100vh; width: 100%; }
+        #sidebar { width: 230px; background: #1a1a27; padding: 15px; flex-shrink: 0; display: flex; flex-direction: column; }
+        #sidebar .brand { color: white; text-align: center; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #2b2b40; padding-bottom: 15px; margin-bottom: 20px; font-size: 0.9rem; }
+        #sidebar a { color: #92929f; display: block; padding: 10px; text-decoration: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+        #sidebar a:hover, .active-link { background: #2b2b40; color: #009ef7 !important; }
+        .sidebar-user-info { padding: 12px 10px; text-align: center; border-top: 1px solid #2b2b40; margin-top: auto; background: #1e1e2d; border-radius: 8px; cursor: pointer; }
+        .user-name { color: white; font-size: 0.85rem; font-weight: 600; display: block; }
+        .user-level { color: #009ef7; font-size: 0.7rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 10px; }
+        .btn-logout { color: #f1416c !important; border: 1px solid #f1416c; font-size: 0.75rem; font-weight: bold; }
+        #main { flex-grow: 1; padding: 20px; overflow-y: auto; }
+        .table { font-size: 0.76rem; vertical-align: middle; }
+        .table thead th { background: #f1f1f4; text-transform: uppercase; font-size: 0.68rem; padding: 10px 5px; }
+        .report-summary-row td, .table tfoot td { background: #e1e3ea !important; padding: 10px 15px; font-size: 0.75rem; border-top: 2px solid #ced4da; }
+        .btn-action { padding: 3px 10px; font-size: 0.7rem; font-weight: 600; }
+        .filter-label { font-size: 0.65rem; font-weight: bold; color: #5e6278; text-transform: uppercase; }
+        .form-filter { font-size: 0.75rem; height: 32px; }
+        .detail-card { border: 1px solid #ebedef; border-radius: 6px; background: white; margin-bottom: 10px; }
+        .detail-card h6 { font-size: 0.7rem; font-weight: 800; background: #f4f4f7; padding: 10px; margin: 0; color: #009ef7; text-transform: uppercase; }
+        .is-invalid { border-color: #dc3545 !important; background-image: none !important; }
+        .feedback-error { color: #dc3545; font-size: 0.7rem; margin-top: 2px; font-weight: bold; display: none; }
     </style>
 </head>
 <body>
 
-<div id="mobile-nav">
-    <div onclick="toggleSidebar()" style="cursor: pointer; font-size: 1.2rem;">☰</div>
-    <div class="fw-bold" style="letter-spacing: 1px;">WISI INVENTARIO</div>
-    <div style="width: 24px;"></div> </div>
-
 <div id="view-login">
-    <div class="card login-card p-4">
-        <div class="text-center mb-4">
-            <img src="/logo_wisi.png" alt="Logo" style="width: 70px; margin-bottom: 15px;">
-            <h4 class="fw-bold text-dark">BIENVENIDO</h4>
-            <p class="text-muted small">Ingrese sus credenciales para continuar</p>
-        </div>
+    <div class="card login-card p-4 text-center">
+        <h4 class="fw-bold">BIENVENIDO</h4>
+        <p class="text-muted small">Inventario Global de Maquinas</p>
         <form id="formLogin">
-            <div class="mb-3">
-                <label class="filter-label">Usuario</label>
-                <input type="text" id="log-user" class="form-control form-filter shadow-none" required>
-            </div>
-            <div class="mb-4">
-                <label class="filter-label">Clave</label>
-                <input type="password" id="log-pass" class="form-control form-filter shadow-none" required>
-            </div>
+            <div class="text-start mb-3"><label class="filter-label">Usuario</label><input type="text" id="log-user" class="form-control" required></div>
+            <div class="text-start mb-3"><label class="filter-label">Clave</label><input type="password" id="log-pass" class="form-control" required></div>
             <div id="loginError" class="alert alert-danger p-2 small mb-3" style="display:none;"></div>
-            <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">INICIAR SESIÓN</button>
+            <button type="submit" class="btn btn-primary w-100 fw-bold">ENTRAR</button>
         </form>
     </div>
 </div>
@@ -129,140 +52,76 @@
 <div id="view-app">
     <nav id="sidebar">
         <div class="brand">Inventario Global<br>de Maquinas</div>
-        <a onclick="menuNav('maquina')" id="link-maquina">Máquinas</a>
+        <a onclick="cambiarVista('maquina')" id="link-maquina">Máquinas</a>
         <div id="menu-admin-only">
-            <hr style="border-color: #2b2b40; opacity: 0.5;">
-            <a onclick="menuNav('grupo')" id="link-grupo">Grupos</a>
-            <a onclick="menuNav('sucursal')" id="link-sucursal">Sucursales</a>
-            <a onclick="menuNav('estado')" id="link-estado">Estados</a>
-            <a onclick="menuNav('sociedad')" id="link-sociedad">Sociedades</a>
-            <a onclick="menuNav('valor')" id="link-valor">Valores</a>
-            <a onclick="menuNav('juego')" id="link-juego">Juegos</a>
-            <a onclick="menuNav('marca')" id="link-marca">Marcas</a>
-            <a onclick="menuNav('modelo')" id="link-modelo">Modelos</a>
+            <hr style="border-color: #2b2b40;">
+            <a onclick="cambiarVista('grupo')" id="link-grupo">Grupos</a>
+            <a onclick="cambiarVista('sucursal')" id="link-sucursal">Sucursales</a>
+            <a onclick="cambiarVista('estado')" id="link-estado">Estados</a>
+            <a onclick="cambiarVista('sociedad')" id="link-sociedad">Sociedades</a>
+            <a onclick="cambiarVista('valor')" id="link-valor">Valores</a>
+            <a onclick="cambiarVista('juego')" id="link-juego">Juegos</a>
+            <a onclick="cambiarVista('marca')" id="link-marca">Marcas</a>
+            <a onclick="cambiarVista('modelo')" id="link-modelo">Modelos</a>
         </div>
-        <div class="sidebar-user-info" onclick="irAVistaUsuarios(); if(window.innerWidth < 992) toggleSidebar();">
+        <div class="sidebar-user-info" onclick="irAVistaUsuarios()">
             <span class="user-name" id="display-user-name">---</span>
             <span class="user-level" id="display-user-level">---</span>
-            <button onclick="event.stopPropagation(); cerrarSesion();" class="btn btn-logout w-100 mt-2">CERRAR SESIÓN</button>
+            <a onclick="event.stopPropagation(); cerrarSesion();" class="btn btn-logout w-100 mt-2">Cerrar Sesión</a>
         </div>
     </nav>
 
     <main id="main">
         <div id="section-lista">
-            <div class="row align-items-center mb-4 g-2">
-                <div class="col-12 col-lg-8">
-                    <h4 id="viewTitle" class="fw-bold m-0 text-dark">Inventario de Máquinas</h4>
-                </div>
-                <div class="col-12 col-lg-4 text-lg-end">
-                    <button class="btn btn-success btn-action px-4 py-2 w-100" id="btn-nuevo-global" onclick="controladorAccionNuevo()">+ Nuevo Registro</button>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 id="viewTitle" class="fw-bold m-0 text-dark">Máquinas</h5>
+                <button class="btn btn-success btn-action px-4" id="btn-nuevo-global" onclick="controladorAccionNuevo()">Nuevo Registro</button>
             </div>
-
-            <div class="card border-0 shadow-sm mb-4" id="panelFiltros" style="display:none;">
+            <div class="card mb-3" id="panelFiltros" style="display:none;">
                 <div class="card-body p-3">
-                    <div class="row g-3">
-                        <div class="col-md-6"><label class="filter-label">Nombre de Máquina</label><input type="text" id="f-nombre" class="form-control form-filter shadow-none" placeholder="Ej: Ruleta 01"></div>
-                        <div class="col-md-6"><label class="filter-label">Número de Serial</label><input type="text" id="f-serial" class="form-control form-filter shadow-none" placeholder="Ej: SN-456"></div>
-                        <div class="col-md-3 col-6"><label class="filter-label">Grupo</label><select id="f-grupo" class="form-select form-filter shadow-none"></select></div>
-                        <div class="col-md-3 col-6"><label class="filter-label">Sala</label><select id="f-sucursal" class="form-select form-filter shadow-none"></select></div>
-                        <div class="col-md-3 col-6"><label class="filter-label">Marca</label><select id="f-marca" class="form-select form-filter shadow-none"></select></div>
-                        <div class="col-md-3 col-6"><label class="filter-label">Modelo</label><select id="f-modelo" class="form-select form-filter shadow-none"></select></div>
-                        
-                        <div class="col-12 d-flex flex-wrap gap-2 mt-2">
-                            <button class="btn btn-light btn-sm flex-fill" onclick="resetFiltros()">Limpiar Filtros</button>
-                            <button class="btn btn-warning btn-sm flex-fill fw-bold text-dark" onclick="exportarExcel()">Descargar Excel</button>
-                            <button class="btn btn-primary btn-sm flex-fill fw-bold" onclick="window.print()">Imprimir</button>
-                        </div>
+                    <div class="row g-2">
+                        <div class="col-md-6"><label class="filter-label">Nombre</label><input type="text" id="f-nombre" class="form-control form-filter shadow-none"></div>
+                        <div class="col-md-6"><label class="filter-label">Serial</label><input type="text" id="f-serial" class="form-control form-filter shadow-none"></div>
+                        <div class="col-md-3"><label class="filter-label">Grupo</label><select id="f-grupo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Sala</label><select id="f-sucursal" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Marca</label><select id="f-marca" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Modelo</label><select id="f-modelo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Juego</label><select id="f-juego" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Estado</label><select id="f-estado" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Sociedad</label><select id="f-sociedad" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Valor</label><select id="f-valor" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-4 mt-3"><button class="btn btn-secondary btn-action w-100" onclick="resetFiltros()">Limpiar</button></div>
+                        <div class="col-md-4 mt-3"><button class="btn btn-warning btn-action w-100 fw-bold" onclick="exportarExcel()">Excel</button></div>
+                        <div class="col-md-4 mt-3"><button class="btn btn-primary btn-action w-100 fw-bold" onclick="window.print()">Imprimir</button></div>
                     </div>
                 </div>
             </div>
-
-            <div class="table-wrap">
-                <table class="table table-hover">
-                    <thead id="tHead">
-                        <tr id="tHeadSummary" class="report-summary-row" style="display:none;"><td colspan="12"></td></tr>
-                        <tr id="tHeadTitles" class="table-light"></tr>
-                    </thead>
-                    <tbody id="tBody"></tbody>
-                    <tfoot id="tFoot"></tfoot>
+            <div class="card shadow-sm"><div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead id="tHead"><tr id="tHeadSummary" class="report-summary-row" style="display:none;"><td colspan="12"></td></tr><tr id="tHeadTitles" class="table-light"></tr></thead>
+                    <tbody id="tBody"></tbody><tfoot id="tFoot"></tfoot>
                 </table>
-            </div>
+            </div></div>
         </div>
-
         <div id="section-detalles" style="display:none;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="fw-bold m-0">Análisis Estadístico</h5>
-                <button class="btn btn-dark btn-sm px-4" onclick="cerrarVistaDetalles()">← Volver al Listado</button>
-            </div>
-            <div class="alert alert-info border-0 shadow-sm py-3 mb-4" id="alertFiltrosDetalles"></div>
+            <div class="d-flex justify-content-between align-items-center mb-3"><h5>Análisis Detallado</h5><button class="btn btn-dark btn-sm" onclick="cerrarVistaDetalles()">Volver</button></div>
+            <div class="alert alert-primary py-2 x-small mb-3 shadow-sm" id="alertFiltrosDetalles"></div>
             <div class="row g-3" id="containerTablasDetalles"></div>
         </div>
-
         <div id="section-formulario" style="display:none;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="fw-bold m-0">Editor de Registros</h5>
-                <button class="btn btn-outline-secondary btn-sm" onclick="cancelarFormulario()">Cancelar y Volver</button>
-            </div>
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <form id="formMaquinaFull">
-                        <div class="row g-3" id="camposMaquina"></div>
-                        <div class="mt-4 pt-4 border-top text-end">
-                            <button type="submit" id="btnGuardarMaquina" class="btn btn-primary px-5 py-2 fw-bold">Guardar Información</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3"><h5>Gestión</h5><button class="btn btn-sm btn-outline-secondary" onclick="cancelarFormulario()">Volver</button></div>
+            <div class="card"><div class="card-body"><form id="formMaquinaFull"><div class="row" id="camposMaquina"></div><hr><div class="text-end"><button type="submit" id="btnGuardarMaquina" class="btn btn-primary px-5">Guardar</button></div></form></div></div>
         </div>
     </main>
 </div>
 
-<div class="modal fade" id="modalSucursales" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-light">
-                <h6 class="modal-title fw-bold">Gestionar Permisos de Sucursal</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted x-small mb-3">Seleccione las sucursales a las que este usuario podrá acceder:</p>
-                <div id="containerSucursales" class="border rounded" style="max-height: 300px; overflow-y: auto; background: #fafafa;"></div>
-            </div>
-            <div class="modal-footer border-0">
-                <button onclick="guardarSucursales()" class="btn btn-primary w-100 fw-bold">Actualizar Permisos</button>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="modalParam" data-bs-backdrop="static"><div class="modal-dialog"><form id="formParam" class="modal-content"><div class="modal-header border-0"><h6>Nuevo Registro</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="modalFields"></div><div class="modal-footer border-0"><button type="submit" id="btnGuardarParam" class="btn btn-primary w-100">Guardar</button></div></form></div></div>
 
-<div class="modal fade" id="modalConfirmarEliminar" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-body text-center p-4">
-                <div class="text-danger mb-3" style="font-size: 2rem;">⚠</div>
-                <h6 class="fw-bold">¿Desea eliminar el registro?</h6>
-                <p class="text-muted small">Esta acción no se puede deshacer.</p>
-                <div class="d-flex gap-2 mt-4">
-                    <button type="button" class="btn btn-light flex-fill" data-bs-dismiss="modal">No, cancelar</button>
-                    <button type="button" class="btn btn-danger flex-fill fw-bold" id="btnConfirmarAccion">Sí, eliminar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="modalSucursales" data-bs-backdrop="static"><div class="modal-dialog"><div class="modal-content"><div class="modal-header border-0"><h6>Asignar Sucursales</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p class="small text-muted">Marque las sucursales permitidas para este usuario:</p><div id="containerSucursales" style="max-height: 350px; overflow-y: auto;"></div></div><div class="modal-footer border-0"><button onclick="guardarSucursales()" class="btn btn-primary w-100 fw-bold">Guardar Permisos</button></div></div></div></div>
 
-<div class="modal fade" id="modalErrorRelacion" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 pb-0 text-danger"><h6 class="modal-title fw-bold">Acción Denegada</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body text-center">
-                <p class="small text-muted" id="msgErrorRelacion"></p>
-                <button type="button" class="btn btn-dark btn-sm w-100 mt-2" data-bs-dismiss="modal">Entendido</button>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="modalConfirmarEliminar" data-bs-backdrop="static" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold">Confirmar</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><p class="small text-muted mb-0">¿Estás seguro de eliminar este registro?</p></div><div class="modal-footer border-0 justify-content-center"><button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger btn-sm px-4" id="btnConfirmarAccion">Sí, Eliminar</button></div></div></div></div>
+
+<div class="modal fade" id="modalErrorRelacion" data-bs-backdrop="static" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-header border-0 pb-0 text-danger"><h6 class="modal-title fw-bold">Acción Denegada</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><p class="small text-muted mb-0" id="msgErrorRelacion"></p></div><div class="modal-footer border-0"><button type="button" class="btn btn-dark btn-sm w-100" data-bs-dismiss="modal">Entendido</button></div></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -275,18 +134,6 @@
     const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
     const modalError = new bootstrap.Modal(document.getElementById('modalErrorRelacion'));
     const modalSucursales = new bootstrap.Modal(document.getElementById('modalSucursales'));
-
-    // --- FUNCIONES DE INTERFAZ ---
-    function toggleSidebar() {
-        if (window.innerWidth <= 992) {
-            document.getElementById('sidebar').classList.toggle('show');
-        }
-    }
-
-    function menuNav(v) {
-        cambiarVista(v);
-        if (window.innerWidth <= 992) toggleSidebar();
-    }
 
     function aplicarPermisosUI() {
         if(!usuarioActual) return;
@@ -456,18 +303,22 @@
         container.innerHTML = `<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div><span class="ms-2 small text-muted">Cargando lista completa...</span></div>`;
         modalSucursales.show();
         try {
+            // CORRECCIÓN DEFINITIVA: Llamado sin userId para traer la lista completa
             const resAll = await fetch(`${API}/options/sucursal`);
             const resPerm = await fetch(`${API}/permisos_sucursal/${userId}`);
+            
             if (!resAll.ok || !resPerm.ok) throw new Error("Error al obtener datos");
             const allSuc = await resAll.json();
             const userPerms = await resPerm.json();
+            
             if(allSuc.length === 0){ container.innerHTML = '<p class="text-muted text-center small p-3">No hay sucursales registradas.</p>'; return; }
+            
             let html = '';
             allSuc.forEach(s => {
                 const isChecked = userPerms.includes(s.id) ? 'checked' : '';
                 const grupoLabel = s.parent_nom ? `<span class="badge bg-secondary" style="font-size:0.6rem">${s.parent_nom}</span> ` : '';
                 html += `
-                    <div class="form-check border-bottom py-2 px-4 m-0">
+                    <div class="form-check border-bottom py-2 m-0">
                         <input class="form-check-input chk-sucursal" type="checkbox" value="${s.id}" id="chk_${s.id}" ${isChecked}>
                         <label class="form-check-label small w-100" for="chk_${s.id}" style="cursor:pointer">
                             ${grupoLabel} <b>${s.nombre}</b>
@@ -510,8 +361,8 @@
         if (vista !== 'maquina') return;
         let aplicados = []; 
         for (const [k, v] of Object.entries(filtros)) { if (v !== "") aplicados.push(`${k}: ${v}`); }
-        let txt = `Total: ( <b>${total}</b> )`; if (aplicados.length > 0) txt += `, Filtros: ( ${aplicados.length} )`;
-        const content = `<div class="d-flex align-items-center justify-content-between w-100"><div>${txt}</div><div><button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Análisis</button></div></div>`;
+        let txt = `Máquinas totales: ( <b>${total}</b> )`; if (aplicados.length > 0) txt += `, Filtros Totales: ( <b>${aplicados.length}</b> ), Filtros: ( ${aplicados.join(', ')} )`;
+        const content = `<div class="d-flex align-items-center justify-content-between w-100"><div>${txt}</div><div><button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles Estadísticos</button></div></div>`;
         document.getElementById('tFoot').innerHTML = `<tr><td colspan="12">${content}</td></tr>`;
         document.getElementById('tHeadSummary').style.display = 'table-row'; document.getElementById('tHeadSummary').cells[0].innerHTML = content;
         document.getElementById('alertFiltrosDetalles').innerHTML = txt;
@@ -524,7 +375,7 @@
         cats.forEach(c => {
             const count = {}; currentFiltered.forEach(m => { let l = (c.key === 'modelo_nom') ? `${m.modelo_nom || 'N/A'} (${m.marca_nom || 'N/A'})` : (c.key === 'sala_nom') ? `${m.sala_nom || 'N/A'} (${m.grupo_nom || 'N/A'})` : m[c.key] || 'N/A'; count[l] = (count[l] || 0) + 1; });
             const sorted = Object.entries(count).sort((a,b) => b[1] - a[1]);
-            cont.innerHTML += `<div class="col-md-3"><div class="card detail-card shadow-sm"><h6>${c.label}</h6><table class="table detail-table table-sm table-hover mb-0" style="min-width:100%"><tbody>${sorted.map(([n, ct]) => `<tr><td>${n}</td><td class="text-center fw-bold text-primary" style="width:40px">${ct}</td></tr>`).join('')}</tbody></table></div></div>`;
+            cont.innerHTML += `<div class="col-md-3"><div class="card detail-card shadow-sm"><h6>${c.label}</h6><table class="table detail-table table-sm table-hover mb-0"><tbody>${sorted.map(([n, ct]) => `<tr><td>${n}</td><td class="text-center fw-bold text-primary" style="width:40px">${ct}</td></tr>`).join('')}</tbody></table></div></div>`;
         });
     }
 
