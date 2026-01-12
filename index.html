@@ -140,6 +140,7 @@
         document.getElementById('menu-admin-only').style.display = (usuarioActual.nivel == 1) ? 'block' : 'none';
         document.getElementById('btn-nuevo-global').style.display = (usuarioActual.nivel == 3) ? 'none' : 'block';
     }
+
     function verificarSesion() {
         const stored = localStorage.getItem('usuarioInventario');
         if (stored) {
@@ -155,12 +156,15 @@
             document.getElementById('view-app').style.display = 'none';
         }
     }
+
     function actualizarInterfazPerfil() {
         const lvls = {1:'Administrador', 2:'Supervisor', 3:'Normal'};
         document.getElementById('display-user-name').innerText = usuarioActual.nombre;
         document.getElementById('display-user-level').innerText = lvls[usuarioActual.nivel] || 'Usuario';
     }
+
     function irAVistaUsuarios() { if(usuarioActual.nivel == 1) cambiarVista('usuario'); }
+
     function iniciarRealTime() {
         if(refreshInt) clearInterval(refreshInt);
         refreshInt = setInterval(async () => {
@@ -171,6 +175,7 @@
             }
         }, 5000);
     }
+
     async function sincronizarUsuarioLogueado() {
         try {
             const res = await fetch(`${API}/usuario/${usuarioActual.id}`);
@@ -178,6 +183,7 @@
             if(data.id) { usuarioActual = data; localStorage.setItem('usuarioInventario', JSON.stringify(data)); actualizarInterfazPerfil(); }
         } catch(e) {}
     }
+
     function detenerRealTime() { if(refreshInt) clearInterval(refreshInt); }
 
     async function cargarTabla() {
@@ -421,15 +427,16 @@
         modalConfirm.hide();
         if (res.status === 409) { const data = await res.json(); document.getElementById('msgErrorRelacion').innerText = data.message; setTimeout(() => modalError.show(), 300); } else if (res.ok) { cargarTabla(); }
     };
+
     function cerrarSesion() { localStorage.removeItem('usuarioInventario'); usuarioActual = null; document.getElementById('view-app').style.display = 'none'; document.getElementById('view-login').style.display = 'flex'; }
     function cancelarFormulario() { document.getElementById('section-formulario').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
     function controladorAccionNuevo() { if(vista === 'maquina') abrirEditorMaquina(); else abrirModalParametro(); }
     function exportarExcel() { const ws = XLSX.utils.json_to_sheet(currentFiltered.map(m => ({ "Nombre": m.nombre, "Serial": m.serial, "Grupo": m.grupo_nom, "Sala": m.sala_nom, "Marca": m.marca_nom, "Modelo": m.modelo_nom, "Juego": m.juego_nom, "Estado": m.estado_nom, "Sociedad": m.sociedad_nom, "Valor": m.valor_nom }))); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventario"); XLSX.writeFile(wb, "Inventario.xlsx"); }
+    
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
-    // REGISTRO DEL SERVICE WORKER PARA PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail', err));

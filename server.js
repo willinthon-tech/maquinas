@@ -13,20 +13,23 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// CONFIGURACIÓN DE BASE DE DATOS
+// CONFIGURACIÓN DE BASE DE DATOS - Corregido a localhost
 const db = mysql.createConnection({
-    host: '66.97.43.124',
+    host: 'localhost',
     user: 'root',      
     password: 'root',      
     database: 'sistema_maquinas' 
 });
 
 db.connect((err) => {
-    if (err) console.error('Error BD:', err);
-    else console.log('Conectado a BD MySQL');
+    if (err) {
+        console.error('Error conectando a la BD Local:', err);
+    } else {
+        console.log('Conectado exitosamente a MySQL en Localhost');
+    }
 });
 
-// RUTAS API
+// --- RUTAS API ---
 
 app.post('/api/login', (req, res) => {
     const { usuario, clave } = req.body;
@@ -74,32 +77,17 @@ app.post('/api/asignar_sucursales', (req, res) => {
 app.get('/api/options/:tabla', (req, res) => {
     const { tabla } = req.params;
     const { userId } = req.query; 
-
     let sql = `SELECT * FROM ${tabla} ORDER BY nombre`;
-
     if (tabla === 'sucursal') {
         if (userId) {
-            sql = `SELECT s.id, s.nombre, g.nombre as parent_nom 
-                   FROM sucursal s 
-                   LEFT JOIN grupo g ON s.grupo_id = g.id 
-                   INNER JOIN usuario_sucursal us ON s.id = us.sucursal_id
-                   WHERE us.usuario_id = ${mysql.escape(userId)}
-                   ORDER BY g.nombre, s.nombre`;
+            sql = `SELECT s.id, s.nombre, g.nombre as parent_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id INNER JOIN usuario_sucursal us ON s.id = us.sucursal_id WHERE us.usuario_id = ${mysql.escape(userId)} ORDER BY g.nombre, s.nombre`;
         } else {
-            sql = `SELECT s.id, s.nombre, g.nombre as parent_nom 
-                   FROM sucursal s 
-                   LEFT JOIN grupo g ON s.grupo_id = g.id 
-                   ORDER BY g.nombre, s.nombre`;
+            sql = `SELECT s.id, s.nombre, g.nombre as parent_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY g.nombre, s.nombre`;
         }
     }
-    
     if (tabla === 'modelo') {
-        sql = `SELECT m.id, m.nombre, ma.nombre as parent_nom 
-               FROM modelo m 
-               LEFT JOIN marca ma ON m.marca_id = ma.id 
-               ORDER BY ma.nombre, m.nombre`;
+        sql = `SELECT m.id, m.nombre, ma.nombre as parent_nom FROM modelo m LEFT JOIN marca ma ON m.marca_id = ma.id ORDER BY ma.nombre, m.nombre`;
     }
-
     db.query(sql, (err, results) => {
         if (err) return res.status(500).send(err);
         res.json(results);
@@ -109,39 +97,17 @@ app.get('/api/options/:tabla', (req, res) => {
 app.get('/api/:tabla', (req, res) => {
     const { tabla } = req.params;
     const { userId } = req.query;
-
     let sql = "";
     if (tabla === 'maquina') {
-        sql = `SELECT m.*, 
-                g.nombre as grupo_nom, s.nombre as sala_nom, 
-                ma.nombre as marca_nom, mo.nombre as modelo_nom, 
-                j.nombre as juego_nom, e.nombre as estado_nom, 
-                so.nombre as sociedad_nom, v.nombre as valor_nom
-               FROM maquina m
-               LEFT JOIN sucursal s ON m.sucursal_id = s.id
-               LEFT JOIN grupo g ON s.grupo_id = g.id
-               LEFT JOIN modelo mo ON m.modelo_id = mo.id
-               LEFT JOIN marca ma ON mo.marca_id = ma.id
-               LEFT JOIN juego j ON m.juego_id = j.id
-               LEFT JOIN estado e ON m.estado_id = e.id
-               LEFT JOIN sociedad so ON m.sociedad_id = so.id
-               LEFT JOIN valor v ON m.valor_id = v.id`;
-
-        if (userId) {
-            sql += ` INNER JOIN usuario_sucursal us ON m.sucursal_id = us.sucursal_id 
-                     WHERE us.usuario_id = ${mysql.escape(userId)}`;
-        }
-    } 
-    else if (tabla === 'sucursal') {
+        sql = `SELECT m.*, g.nombre as grupo_nom, s.nombre as sala_nom, ma.nombre as marca_nom, mo.nombre as modelo_nom, j.nombre as juego_nom, e.nombre as estado_nom, so.nombre as sociedad_nom, v.nombre as valor_nom FROM maquina m LEFT JOIN sucursal s ON m.sucursal_id = s.id LEFT JOIN grupo g ON s.grupo_id = g.id LEFT JOIN modelo mo ON m.modelo_id = mo.id LEFT JOIN marca ma ON mo.marca_id = ma.id LEFT JOIN juego j ON m.juego_id = j.id LEFT JOIN estado e ON m.estado_id = e.id LEFT JOIN sociedad so ON m.sociedad_id = so.id LEFT JOIN valor v ON m.valor_id = v.id`;
+        if (userId) { sql += ` INNER JOIN usuario_sucursal us ON m.sucursal_id = us.sucursal_id WHERE us.usuario_id = ${mysql.escape(userId)}`; }
+    } else if (tabla === 'sucursal') {
         sql = "SELECT s.*, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id";
-    }
-    else if (tabla === 'modelo') { 
+    } else if (tabla === 'modelo') { 
         sql = "SELECT m.*, ma.nombre as marca_nom FROM modelo m LEFT JOIN marca ma ON m.marca_id = ma.id";
-    }
-    else {
+    } else {
         sql = `SELECT * FROM ${tabla}`;
     }
-
     db.query(sql, (err, results) => {
         if (err) return res.status(500).send(err.message);
         res.json(results);
@@ -180,4 +146,4 @@ app.delete('/api/:tabla/:id', (req, res) => {
     });
 });
 
-app.listen(3001, () => console.log('Servidor corriendo...'));
+app.listen(3001, () => console.log('Servidor corriendo en puerto 3001'));
