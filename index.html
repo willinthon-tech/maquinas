@@ -449,7 +449,7 @@
             </div>
             <div class="col-md-4 mb-2">
                 <label class="filter-label">Puestos</label>
-                <input type="number" name="puestos" class="form-control" value="${current.puestos || 1}" min="1" onkeypress="return event.charCode >= 48" required>
+                <input type="number" id="inputPuestos" name="puestos" class="form-control" value="${current.puestos || 1}" min="1" required>
             </div>`;
 
         // 2. Mantenemos tu arreglo original de configuración para los selectores
@@ -492,7 +492,44 @@
         // 4. Inyectamos todo el HTML generado en el contenedor
         container.innerHTML = html;
 
-        // 5. Activamos la validación de serial (recuerda aplicar la excepción para N/A que te pasé antes)
+        // 5. LÓGICA DE VALIDACIÓN DINÁMICA
+        const selectTipo = document.querySelector('select[name="tipo_id"]');
+        const inputPuestos = document.getElementById('inputPuestos');
+
+        if (selectTipo && inputPuestos) {
+            // Función para aplicar la regla
+            const aplicarReglaPuestos = () => {
+                const textoTipo = selectTipo.options[selectTipo.selectedIndex].text.toUpperCase();
+                
+                if (textoTipo === "NORMAL") {
+                    inputPuestos.value = 1;
+                    inputPuestos.min = 1;
+                    inputPuestos.readOnly = true; // Lo bloqueamos
+                    inputPuestos.classList.add('bg-light'); // Color gris de deshabilitado
+                } else if (textoTipo === "MULTIPUESTO") {
+                    inputPuestos.readOnly = false;
+                    inputPuestos.min = 2;
+                    inputPuestos.classList.remove('bg-light');
+                    // Si el valor actual es 1 y cambiaron a multipuesto, subimos a 2
+                    if (parseInt(inputPuestos.value) < 2) {
+                        inputPuestos.value = 2;
+                    }
+                } else {
+                    // Para otros tipos que no sean ninguno de los dos
+                    inputPuestos.readOnly = false;
+                    inputPuestos.min = 1;
+                    inputPuestos.classList.remove('bg-light');
+                }
+            };
+
+            // Escuchar el cambio
+            selectTipo.addEventListener('change', aplicarReglaPuestos);
+            
+            // Ejecutar una vez al abrir (por si es Edición)
+            setTimeout(aplicarReglaPuestos, 500); // Pequeño delay para asegurar que los options cargaron
+        }
+
+        // 6. Activamos la validación de serial (recuerda aplicar la excepción para N/A que te pasé antes)
         activarValidacionEnInput('input[name="serial"]', 'maquina', 'serial', 'btnGuardarMaquina', id);
     }
     

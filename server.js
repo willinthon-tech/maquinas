@@ -28,15 +28,26 @@ db.connect((err) => {
 
 // --- FUNCIONES DE AYUDA (Helpers) ---
 
-function procesarDatosMaquina(data) {
+function procesarDatosMaquina(data, tipoNombre) {
     let limpio = { ...data };
-    // Lógica para Serial
+    
+    // Serial N/A
     if (!limpio.serial || limpio.serial.trim() === "" || limpio.serial.toUpperCase() === "N/A") {
         limpio.serial = "N/A";
     }
-    // Lógica para Puestos (Asegura número y mínimo 1)
-    limpio.puestos = parseInt(limpio.puestos) || 1;
-    if (limpio.puestos < 1) limpio.puestos = 1;
+
+    // Validación estricta de puestos según el nombre del tipo
+    const tNombre = tipoNombre ? tipoNombre.toUpperCase() : "";
+    
+    if (tNombre === "NORMAL") {
+        limpio.puestos = 1;
+    } else if (tNombre === "MULTIPUESTO") {
+        limpio.puestos = parseInt(limpio.puestos) || 2;
+        if (limpio.puestos < 2) limpio.puestos = 2;
+    } else {
+        limpio.puestos = parseInt(limpio.puestos) || 1;
+        if (limpio.puestos < 1) limpio.puestos = 1;
+    }
     
     return limpio;
 }
