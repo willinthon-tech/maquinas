@@ -102,7 +102,7 @@
             </div>
             <div class="card shadow-sm"><div class="card-body p-0">
                 <table class="table table-hover mb-0">
-                    <thead id="tHead"><tr id="tHeadSummary" class="report-summary-row" style="display:none;"><td colspan="12"></td></tr><tr id="tHeadTitles" class="table-light"></tr></thead>
+                    <thead id="tHead"><tr id="tHeadSummary" class="report-summary-row" style="display:none;"><td colspan="15"></td></tr><tr id="tHeadTitles" class="table-light"></tr></thead>
                     <tbody id="tBody"></tbody><tfoot id="tFoot"></tfoot>
                 </table>
             </div></div>
@@ -232,8 +232,8 @@
         const titles = document.getElementById('tHeadTitles'), body = document.getElementById('tBody');
         const styleAcc = (usuarioActual.nivel == 3) ? 'display:none' : '';
         if(vista === 'maquina') {
-            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th>Tipo</th><th>Modo</th><th class="text-center" style="${styleAcc}">Acciones</th>`;
-            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td><b>${i.nombre}</b></td><td><span class="badge bg-dark">${i.serial}</span></td><td>${i.grupo_nom || '-'}</td><td>${i.sala_nom || '-'}</td><td>${i.marca_nom || '-'}</td><td>${i.modelo_nom || '-'}</td><td>${i.juego_nom || '-'}</td><td>${i.estado_nom || '-'}</td><td>${i.sociedad_nom || '-'}</td><td>${i.valor_nom || '-'}</td><td>${i.tipo_nom || '-'}</td><td>${i.modo_nom || '-'}</td><td class="text-center" style="${styleAcc}"><button onclick="abrirEditorMaquina(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, 'maquina')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
+            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th>Tipo</th><th>Puestos</th><th>Modo</th><th class="text-center" style="${styleAcc}">Acciones</th>`;
+            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td><b>${i.nombre}</b></td><td><span class="badge bg-dark">${i.serial}</span></td><td>${i.grupo_nom || '-'}</td><td>${i.sala_nom || '-'}</td><td>${i.marca_nom || '-'}</td><td>${i.modelo_nom || '-'}</td><td>${i.juego_nom || '-'}</td><td>${i.estado_nom || '-'}</td><td>${i.sociedad_nom || '-'}</td><td>${i.valor_nom || '-'}</td><td>${i.tipo_nom || '-'}</td><td class="fw-bold text-center">${i.puestos || '1'}</td><td>${i.modo_nom || '-'}</td><td class="text-center" style="${styleAcc}"><button onclick="abrirEditorMaquina(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, 'maquina')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
         } else if (vista === 'sucursal' || vista === 'modelo') {
             const padre = (vista === 'sucursal') ? 'Grupo' : 'Marca';
             const nomPadre = (vista === 'sucursal') ? 'grupo_nom' : 'marca_nom';
@@ -378,7 +378,7 @@
         for (const [k, v] of Object.entries(filtros)) { if (v !== "") aplicados.push(`${k}: ${v}`); }
         let txt = `Máquinas totales: ( <b>${total}</b> )`; if (aplicados.length > 0) txt += `, Filtros Totales: ( <b>${aplicados.length}</b> ), Filtros: ( ${aplicados.join(', ')} )`;
         const content = `<div class="d-flex align-items-center justify-content-between w-100"><div>${txt}</div><div><button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles Estadísticos</button></div></div>`;
-        document.getElementById('tFoot').innerHTML = `<tr><td colspan="12">${content}</td></tr>`;
+        document.getElementById('tFoot').innerHTML = `<tr><td colspan="15">${content}</td></tr>`;
         document.getElementById('tHeadSummary').style.display = 'table-row'; document.getElementById('tHeadSummary').cells[0].innerHTML = content;
         document.getElementById('alertFiltrosDetalles').innerHTML = txt;
     }
