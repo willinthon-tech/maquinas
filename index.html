@@ -206,16 +206,16 @@
             Sociedad: getS('f-sociedad'), Valor: getS('f-valor')
         };
         currentFiltered = allData.filter(m => 
-            (m.nombre.toLowerCase().includes(fNombre)) && 
-            (m.serial.toLowerCase().includes(fSerial)) &&
-            (f.Grupo === "" || m.grupo_nom === f.Grupo) &&
-            (f.Sala === "" || m.sala_nom === f.Sala) &&
-            (f.Marca === "" || m.marca_nom === f.Marca) &&
-            (f.Modelo === "" || m.modelo_nom === f.Modelo) &&
-            (f.Juego === "" || m.juego_nom === f.Juego) &&
-            (f.Estado === "" || m.estado_nom === f.Estado) &&
-            (f.Sociedad === "" || m.sociedad_nom === f.Sociedad) &&
-            (f.Valor === "" || m.valor_nom === f.Valor)
+            ((m.nombre || "").toLowerCase().includes(fNombre)) && 
+            ((m.serial || "").toLowerCase().includes(fSerial)) &&
+            (f.Grupo === "" || (m.grupo_nom || "") === f.Grupo) &&
+            (f.Sala === "" || (m.sala_nom || "") === f.Sala) &&
+            (f.Marca === "" || (m.marca_nom || "") === f.Marca) &&
+            (f.Modelo === "" || (m.modelo_nom || "") === f.Modelo) &&
+            (f.Juego === "" || (m.juego_nom || "") === f.Juego) &&
+            (f.Estado === "" || (m.estado_nom || "") === f.Estado) &&
+            (f.Sociedad === "" || (m.sociedad_nom || "") === f.Sociedad) &&
+            (f.Valor === "" || (m.valor_nom || "") === f.Valor)
         );
         renderizarTabla(currentFiltered);
         actualizarDropdownsDinamicos(currentFiltered);

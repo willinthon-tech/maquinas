@@ -74,32 +74,18 @@ app.post('/api/asignar_sucursales', (req, res) => {
 // --- CORRECCIÓN CRÍTICA AQUÍ ---
 app.get('/api/options/:tabla', (req, res) => {
     const { tabla } = req.params;
-    const { userId } = req.query; 
 
     if (tabla === 'sucursal') {
-        if (userId && userId !== 'undefined' && userId !== 'null') {
-            // Si viene userId, filtramos por lo que ese usuario tiene permitido (Vista Máquinas)
-            const sql = `SELECT s.id, s.nombre, g.nombre as parent_nom 
-                         FROM sucursal s 
-                         LEFT JOIN grupo g ON s.grupo_id = g.id 
-                         INNER JOIN usuario_sucursal us ON s.id = us.sucursal_id
-                         WHERE us.usuario_id = ${mysql.escape(userId)}
-                         ORDER BY g.nombre, s.nombre`;
-            db.query(sql, (err, results) => {
-                if (err) return res.status(500).send(err);
-                res.json(results);
-            });
-        } else {
-            // SI NO VIENE userId, TRAEMOS TODAS (Gestión de Usuarios / Admin)
-            const sql = `SELECT s.id, s.nombre, g.nombre as parent_nom 
-                         FROM sucursal s 
-                         LEFT JOIN grupo g ON s.grupo_id = g.id 
-                         ORDER BY g.nombre, s.nombre`;
-            db.query(sql, (err, results) => {
-                if (err) return res.status(500).send(err);
-                res.json(results);
-            });
-        }
+        // Traemos SIEMPRE todas las sucursales para que el admin pueda elegir
+        // Independientemente de si el usuario tiene permisos o no
+        const sql = `SELECT s.id, s.nombre, g.nombre as parent_nom 
+                     FROM sucursal s 
+                     LEFT JOIN grupo g ON s.grupo_id = g.id 
+                     ORDER BY g.nombre, s.nombre`;
+        db.query(sql, (err, results) => {
+            if (err) return res.status(500).send(err);
+            res.json(results);
+        });
     } else if (tabla === 'modelo') {
         const sql = `SELECT m.id, m.nombre, ma.nombre as parent_nom FROM modelo m LEFT JOIN marca ma ON m.marca_id = ma.id ORDER BY ma.nombre, m.nombre`;
         db.query(sql, (err, results) => {
