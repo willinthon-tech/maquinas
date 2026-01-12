@@ -124,11 +124,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    const API = "/api";
+    const API = "/api"; // USAMOS RUTA RELATIVA PARA EVITAR MIXED CONTENT
     let vista = "maquina", allData = [], editId = null, currentFiltered = [], usuarioActual = null, refreshInt = null;
     let targetDelete = { id: null, tabla: null };
     let tempUserId = null; 
-    let filtrosCargados = false; 
 
     const modalParam = new bootstrap.Modal(document.getElementById('modalParam'));
     const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
@@ -180,24 +179,14 @@
     }
     function detenerRealTime() { if(refreshInt) clearInterval(refreshInt); }
 
-    // --- CARGA DE TABLA CON ID DE USUARIO PARA FILTRADO ---
     async function cargarTabla() {
         const res = await fetch(`${API}/${vista}?userId=${usuarioActual.id}`);
         const data = await res.json();
         allData = Array.isArray(data) ? data : [];
-        
-        if (vista === 'maquina') {
-            if (!filtrosCargados) {
-                // Para llenar los selects de FILTRO iniciales, también usamos la data filtrada
-                actualizarDropdownsDinamicos(allData);
-                filtrosCargados = true;
-            }
-            aplicarFiltros(); 
-        } else {
-            renderizarTabla(allData);
-        }
+        if (vista === 'maquina') aplicarFiltros(); else renderizarTabla(allData);
     }
 
+    // --- FILTRADO EN CASCADA TOTAL ---
     function aplicarFiltros() {
         if (vista !== 'maquina') return;
         
@@ -213,7 +202,9 @@
             Sociedad: getS('f-sociedad'), Valor: getS('f-valor')
         };
 
-        const dataSoloSelects = allData.filter(m => 
+        currentFiltered = allData.filter(m => 
+            (m.nombre.toLowerCase().includes(fNombre)) && 
+            (m.serial.toLowerCase().includes(fSerial)) &&
             (f.Grupo === "" || m.grupo_nom === f.Grupo) &&
             (f.Sala === "" || m.sala_nom === f.Sala) &&
             (f.Marca === "" || m.marca_nom === f.Marca) &&
@@ -224,14 +215,9 @@
             (f.Valor === "" || m.valor_nom === f.Valor)
         );
 
-        currentFiltered = dataSoloSelects.filter(m => 
-            (m.nombre.toLowerCase().includes(fNombre)) && 
-            (m.serial.toLowerCase().includes(fSerial))
-        );
-
         renderizarTabla(currentFiltered);
-        actualizarDropdownsDinamicos(dataSoloSelects);
-        generarResumenReporte(currentFiltered.length, { ...f, Nombre: rawNombre, Serial: rawSerial });
+        actualizarDropdownsDinamicos(currentFiltered);
+        generarResumenReporte(currentFiltered.length, { Nombre: rawNombre, Serial: rawSerial, ...f });
     }
 
     function renderizarTabla(data) {
@@ -330,7 +316,7 @@
         modalSucursales.show();
 
         try {
-            const resAll = await fetch(`${API}/options/sucursal`);
+            const resAll = await fetch(`${API}/options/sucursal?userId=${usuarioActual.id}`);
             const resPerm = await fetch(`${API}/permisos_sucursal/${userId}`);
             
             if (!resAll.ok || !resPerm.ok) throw new Error("Error al obtener datos");
@@ -417,6 +403,7 @@
             cont.innerHTML += `<div class="col-md-3"><div class="card detail-card shadow-sm"><h6>${c.label}</h6><table class="table detail-table table-sm table-hover mb-0"><tbody>${sorted.map(([n, ct]) => `<tr><td>${n}</td><td class="text-center fw-bold text-primary" style="width:40px">${ct}</td></tr>`).join('')}</tbody></table></div></div>`;
         });
     }
+
     function cambiarVista(v) {
         vista = v; 
         document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active-link'));
@@ -424,11 +411,9 @@
         document.getElementById('viewTitle').innerText = (v === 'maquina') ? 'Inventario de Máquinas' : v;
         document.getElementById('panelFiltros').style.display = (v === 'maquina') ? 'block' : 'none';
         document.getElementById('tHeadSummary').style.display = 'none'; document.getElementById('tFoot').innerHTML = "";
-        
-        filtrosCargados = false; 
-
         aplicarPermisosUI(); cancelarFormulario(); cerrarVistaDetalles(); cargarTabla();
     }
+
     async function abrirModalParametro(id = null) {
         editId = id; const container = document.getElementById('modalFields');
         let current = id ? await (await fetch(`${API}/${vista}/${id}`)).json() : {};
@@ -443,18 +428,13 @@
         } else {
             const d = {'sucursal':[{l:'Grupo',t:'grupo',f:'grupo_id'}],'modelo':[{l:'Marca',t:'marca',f:'marca_id'}]};
             html = `<div class="mb-3"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div>`;
-            if (d[vista]) { for (let x of d[vista]) { const o = await (await fetch(`${API}/options/${x.t}`)).json(); html += `<div class="mb-3"><label class="filter-label">${x.l}</label><select name="${x.f}" class="form-select" required><option value="">--</option>${o.map(opt => `<option value="${opt.id}" ${current[x.f] == opt.id ? 'selected' : ''}>${opt.nombre}</option>`).join('')}</select></div>`; } }
+            if (d[vista]) { for (let x of d[vista]) { const o = await (await fetch(`${API}/options/${x.t}?userId=${usuarioActual.id}`)).json(); html += `<div class="mb-3"><label class="filter-label">${x.l}</label><select name="${x.f}" class="form-select" required><option value="">--</option>${o.map(opt => `<option value="${opt.id}" ${current[x.f] == opt.id ? 'selected' : ''}>${opt.nombre}</option>`).join('')}</select></div>`; } }
         }
         container.innerHTML = html; 
-        
-        if(vista === 'usuario') { 
-             activarValidacionEnInput('input[name="usuario"]', 'usuario', 'usuario', 'btnGuardarParam', id);
-        }
-
+        if(vista === 'usuario') { activarValidacionEnInput('input[name="usuario"]', 'usuario', 'usuario', 'btnGuardarParam', id); }
         modalParam.show();
     }
     
-    // --- ENVIO DE ID AL ABRIR EDITOR PARA QUE SOLO TRAIGA SUCURSALES PERMITIDAS ---
     async function abrirEditorMaquina(id = null) {
         editId = id; document.getElementById('section-lista').style.display = 'none'; document.getElementById('section-formulario').style.display = 'block';
         const container = document.getElementById('camposMaquina');
@@ -464,7 +444,6 @@
         
         for (let d of dMaq) {
             const opts = await (await fetch(`${API}/options/${d.table}?userId=${usuarioActual.id}`)).json();
-            
             html += `<div class="col-md-4 mb-2"><label class="filter-label">${d.label}</label><select name="${d.fk}" class="form-select" required><option value="">--</option>`;
             if (d.grouped) { const g = {}; opts.forEach(o => { const p = o.parent_nom || 'Otros'; if (!g[p]) g[p] = []; g[p].push(o); }); for (const p in g) { html += `<optgroup label="${p.toUpperCase()}">`; g[p].forEach(o => { html += `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`; }); html += `</optgroup>`; }
             } else { html += opts.map(o => `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`).join(''); } html += `</select></div>`;
@@ -473,39 +452,22 @@
         activarValidacionEnInput('input[name="serial"]', 'maquina', 'serial', 'btnGuardarMaquina', id);
     }
     
-    document.getElementById('formLogin').onsubmit = async (e) => { e.preventDefault(); try { const res = await fetch(`${API}/login`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ usuario: document.getElementById('log-user').value, clave: document.getElementById('log-pass').value }) }); const data = await res.json(); if (data.success) { localStorage.setItem('usuarioInventario', JSON.stringify(data.user)); verificarSesion(); } else { const err = document.getElementById('loginError'); err.innerText = data.message; err.style.display = 'block'; } } catch(e) { alert("Error de conexión con el servidor"); } };
+    document.getElementById('formLogin').onsubmit = async (e) => { e.preventDefault(); try { const res = await fetch(`${API}/login`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ usuario: document.getElementById('log-user').value, clave: document.getElementById('log-pass').value }) }); const data = await res.json(); if (data.success) { localStorage.setItem('usuarioInventario', JSON.stringify(data.user)); verificarSesion(); } else { const err = document.getElementById('loginError'); err.innerText = data.message; err.style.display = 'block'; } } catch(e) { alert("Error de conexión"); } };
     document.getElementById('formParam').onsubmit = async (e) => { e.preventDefault(); await fetch(editId ? `${API}/${vista}/${editId}` : `${API}/${vista}`, { method: editId ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(e.target))) }); modalParam.hide(); cargarTabla(); };
     document.getElementById('formMaquinaFull').onsubmit = async (e) => { e.preventDefault(); await fetch(editId ? `${API}/maquina/${editId}` : `${API}/maquina`, { method: editId ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(e.target))) }); cancelarFormulario(); cargarTabla(); };
 
-    function solicitarEliminar(id, tabla) {
-        targetDelete = { id, tabla };
-        modalConfirm.show();
-    }
-    
+    function solicitarEliminar(id, tabla) { targetDelete = { id, tabla }; modalConfirm.show(); }
     document.getElementById('btnConfirmarAccion').onclick = async () => {
         const res = await fetch(`${API}/${targetDelete.tabla}/${targetDelete.id}`, { method: 'DELETE' });
         modalConfirm.hide();
-
         if (res.status === 409) {
             const data = await res.json();
             document.getElementById('msgErrorRelacion').innerText = data.message;
             setTimeout(() => modalError.show(), 300);
-        } else if (res.ok) {
-            cargarTabla();
-        } else {
-            alert("Error desconocido al eliminar");
-        }
+        } else if (res.ok) { cargarTabla(); }
     };
 
-    function cerrarSesion() { 
-        localStorage.removeItem('usuarioInventario'); 
-        usuarioActual = null;
-        document.getElementById('view-app').style.display = 'none';
-        document.getElementById('view-login').style.display = 'flex';
-        document.getElementById('log-user').value = "";
-        document.getElementById('log-pass').value = "";
-    }
-
+    function cerrarSesion() { localStorage.removeItem('usuarioInventario'); usuarioActual = null; document.getElementById('view-app').style.display = 'none'; document.getElementById('view-login').style.display = 'flex'; }
     function cancelarFormulario() { document.getElementById('section-formulario').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }

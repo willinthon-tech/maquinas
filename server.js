@@ -13,6 +13,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// CONFIGURACIÓN DE BASE DE DATOS
 const db = mysql.createConnection({
     host: '66.97.43.124',
     user: 'root',      
@@ -25,7 +26,7 @@ db.connect((err) => {
     else console.log('Conectado a BD MySQL');
 });
 
-// --- RUTAS API ---
+// RUTAS API
 
 app.post('/api/login', (req, res) => {
     const { usuario, clave } = req.body;
@@ -70,7 +71,6 @@ app.post('/api/asignar_sucursales', (req, res) => {
     });
 });
 
-// --- SELECTS DINÁMICOS (ESTRICTOS) ---
 app.get('/api/options/:tabla', (req, res) => {
     const { tabla } = req.params;
     const { userId } = req.query; 
@@ -78,7 +78,6 @@ app.get('/api/options/:tabla', (req, res) => {
     let sql = `SELECT * FROM ${tabla} ORDER BY nombre`;
 
     if (tabla === 'sucursal') {
-        // LÓGICA ESTRICTA: SI HAY USER ID, FILTRAMOS SIEMPRE (SIN IMPORTAR SI ES ADMIN)
         if (userId) {
             sql = `SELECT s.id, s.nombre, g.nombre as parent_nom 
                    FROM sucursal s 
@@ -87,7 +86,6 @@ app.get('/api/options/:tabla', (req, res) => {
                    WHERE us.usuario_id = ${mysql.escape(userId)}
                    ORDER BY g.nombre, s.nombre`;
         } else {
-            // Solo si no viene userId (caso raro) mostramos todo
             sql = `SELECT s.id, s.nombre, g.nombre as parent_nom 
                    FROM sucursal s 
                    LEFT JOIN grupo g ON s.grupo_id = g.id 
@@ -108,7 +106,6 @@ app.get('/api/options/:tabla', (req, res) => {
     });
 });
 
-// --- CRUD PRINCIPAL (ESTRICTO) ---
 app.get('/api/:tabla', (req, res) => {
     const { tabla } = req.params;
     const { userId } = req.query;
@@ -130,7 +127,6 @@ app.get('/api/:tabla', (req, res) => {
                LEFT JOIN sociedad so ON m.sociedad_id = so.id
                LEFT JOIN valor v ON m.valor_id = v.id`;
 
-        // LÓGICA ESTRICTA: FILTRAR SIEMPRE QUE HAYA USER ID
         if (userId) {
             sql += ` INNER JOIN usuario_sucursal us ON m.sucursal_id = us.sucursal_id 
                      WHERE us.usuario_id = ${mysql.escape(userId)}`;
@@ -184,4 +180,4 @@ app.delete('/api/:tabla/:id', (req, res) => {
     });
 });
 
-app.listen(3001, () => console.log('Servidor corriendo...'));
+app.listen(3000, () => console.log('Servidor corriendo...'));
