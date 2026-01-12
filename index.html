@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Inventario Global de Maquinas</title>
     <link rel="icon" type="image/png" href="/logo_wisi.png">
+    <link rel="manifest" href="/manifest.json">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <meta name="theme-color" content="#1a1a27">
@@ -124,7 +125,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    const API = "/api"; // USAMOS RUTA RELATIVA PARA EVITAR MIXED CONTENT
+    const API = "/api"; 
     let vista = "maquina", allData = [], editId = null, currentFiltered = [], usuarioActual = null, refreshInt = null;
     let targetDelete = { id: null, tabla: null };
     let tempUserId = null; 
@@ -186,22 +187,18 @@
         if (vista === 'maquina') aplicarFiltros(); else renderizarTabla(allData);
     }
 
-    // --- FILTRADO EN CASCADA TOTAL ---
     function aplicarFiltros() {
         if (vista !== 'maquina') return;
-        
         const rawNombre = document.getElementById('f-nombre')?.value || "";
         const rawSerial = document.getElementById('f-serial')?.value || "";
         const fNombre = rawNombre.toLowerCase();
         const fSerial = rawSerial.toLowerCase();
-        
         const getS = (id) => document.getElementById(id)?.value || "";
         const f = {
             Grupo: getS('f-grupo'), Sala: getS('f-sucursal'), Marca: getS('f-marca'),
             Modelo: getS('f-modelo'), Juego: getS('f-juego'), Estado: getS('f-estado'),
             Sociedad: getS('f-sociedad'), Valor: getS('f-valor')
         };
-
         currentFiltered = allData.filter(m => 
             (m.nombre.toLowerCase().includes(fNombre)) && 
             (m.serial.toLowerCase().includes(fSerial)) &&
@@ -214,7 +211,6 @@
             (f.Sociedad === "" || m.sociedad_nom === f.Sociedad) &&
             (f.Valor === "" || m.valor_nom === f.Valor)
         );
-
         renderizarTabla(currentFiltered);
         actualizarDropdownsDinamicos(currentFiltered);
         generarResumenReporte(currentFiltered.length, { Nombre: rawNombre, Serial: rawSerial, ...f });
@@ -256,28 +252,19 @@
     function activarValidacionEnInput(selectorInput, tabla, campo, btnGuardarId, idRegistro = null) {
         const input = document.querySelector(selectorInput);
         if (!input) return;
-
-        if(input.parentNode.querySelector('.feedback-error')){
-            input.parentNode.querySelector('.feedback-error').remove();
-        }
+        if(input.parentNode.querySelector('.feedback-error')){ input.parentNode.querySelector('.feedback-error').remove(); }
         let errorMsg = document.createElement('div');
         errorMsg.className = 'feedback-error';
         errorMsg.innerText = `Este ${campo} ya existe en la base de datos.`;
         input.parentNode.appendChild(errorMsg);
-        
         const btn = document.getElementById(btnGuardarId);
         input.classList.remove('is-invalid');
         errorMsg.style.display = 'none';
         if(btn) btn.disabled = false;
-
         const newInput = input.cloneNode(true);
         input.parentNode.replaceChild(newInput, input);
-
         const activeInput = document.querySelector(selectorInput);
-        if(!activeInput.parentNode.querySelector('.feedback-error')) {
-             activeInput.parentNode.appendChild(errorMsg);
-        }
-
+        if(!activeInput.parentNode.querySelector('.feedback-error')) { activeInput.parentNode.appendChild(errorMsg); }
         activeInput.addEventListener('keyup', async () => {
             const valor = activeInput.value.trim();
             if (valor.length < 2) {
@@ -286,16 +273,11 @@
                  if(btn) btn.disabled = false;
                  return; 
             }
-
             try {
                 let url = `${API}/validar/${tabla}/${campo}/${valor}`;
-                if(idRegistro) {
-                    url += `?excludeId=${idRegistro}`;
-                }
-
+                if(idRegistro) { url += `?excludeId=${idRegistro}`; }
                 const res = await fetch(url);
                 const data = await res.json();
-
                 if (data.existe) {
                     activeInput.classList.add('is-invalid');
                     errorMsg.style.display = 'block';
@@ -314,21 +296,15 @@
         const container = document.getElementById('containerSucursales');
         container.innerHTML = `<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div><span class="ms-2 small text-muted">Cargando datos...</span></div>`;
         modalSucursales.show();
-
         try {
             const resAll = await fetch(`${API}/options/sucursal?userId=${usuarioActual.id}`);
             const resPerm = await fetch(`${API}/permisos_sucursal/${userId}`);
-            
             if (!resAll.ok || !resPerm.ok) throw new Error("Error al obtener datos");
-
             const allSuc = await resAll.json();
             const userPerms = await resPerm.json();
-
             if(allSuc.length === 0){ container.innerHTML = '<p class="text-muted text-center small">No hay sucursales registradas.</p>'; return; }
-
             let html = '';
             allSuc.sort((a,b) => a.nombre.localeCompare(b.nombre));
-
             allSuc.forEach(s => {
                 const isChecked = userPerms.includes(s.id) ? 'checked' : '';
                 const label = s.parent_nom ? `<b>${s.nombre}</b> <span class="text-muted">(${s.parent_nom})</span>` : `<b>${s.nombre}</b>`;
@@ -343,35 +319,23 @@
         const originalText = btn.innerText;
         btn.innerText = "Guardando...";
         btn.disabled = true;
-
         try {
             const checkedBoxes = document.querySelectorAll('.chk-sucursal:checked');
             const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
-
             const res = await fetch(`${API}/asignar_sucursales`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ usuario_id: tempUserId, sucursales: selectedIds })
             });
-
-            if(res.ok) {
-                modalSucursales.hide();
-            } else {
-                alert("Error al guardar los permisos en el servidor.");
-            }
-
+            if(res.ok) { modalSucursales.hide(); } else { alert("Error al guardar."); }
         } catch(e) { alert("Error de conexión."); } finally { btn.innerText = originalText; btn.disabled = false; }
     }
 
     function actualizarDropdownsDinamicos(data) {
         const conf = {'f-grupo':'grupo_nom','f-sucursal':'sala_nom','f-marca':'marca_nom','f-modelo':'modelo_nom','f-juego':'juego_nom','f-estado':'estado_nom','f-sociedad':'sociedad_nom','f-valor':'valor_nom'};
-        
         Object.keys(conf).forEach(id => { 
             const s = document.getElementById(id); 
-            if(!s) return; 
-
-            if(document.activeElement === s) return; 
-
+            if(!s || document.activeElement === s) return; 
             const v = s.value; 
             const u = [...new Set(data.map(i => i[conf[id]]))].filter(x => x).sort(); 
             s.innerHTML = '<option value="">TODOS</option>' + u.map(x => `<option value="${x}" ${x==v?'selected':''}>${x}</option>`).join(''); 
@@ -381,11 +345,7 @@
     function generarResumenReporte(total, filtros) {
         if (vista !== 'maquina') return;
         let aplicados = []; 
-        for (const [k, v] of Object.entries(filtros)) { 
-            if (v !== "") {
-                aplicados.push(`${k}: ${v}`); 
-            }
-        }
+        for (const [k, v] of Object.entries(filtros)) { if (v !== "") aplicados.push(`${k}: ${v}`); }
         let txt = `Máquinas totales: ( <b>${total}</b> )`; if (aplicados.length > 0) txt += `, Filtros Totales: ( <b>${aplicados.length}</b> ), Filtros: ( ${aplicados.join(', ')} )`;
         const content = `<div class="d-flex align-items-center justify-content-between w-100"><div>${txt}</div><div><button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles Estadísticos</button></div></div>`;
         document.getElementById('tFoot').innerHTML = `<tr><td colspan="12">${content}</td></tr>`;
@@ -441,7 +401,6 @@
         let current = id ? await (await fetch(`${API}/maquina/${id}`)).json() : {};
         let html = `<div class="col-md-6 mb-2"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div><div class="col-md-6 mb-2"><label class="filter-label">Serial</label><input type="text" name="serial" class="form-control" value="${current.serial || ''}" required></div>`;
         const dMaq = [{ label: 'Sala / Grupo', table: 'sucursal', fk: 'sucursal_id', grouped: true }, { label: 'Marca / Modelo', table: 'modelo', fk: 'modelo_id', grouped: true }, { label: 'Juego', table: 'juego', fk: 'juego_id' }, { label: 'Estado', table: 'estado', fk: 'estado_id' }, { label: 'Sociedad', table: 'sociedad', fk: 'sociedad_id' }, { label: 'Valor', table: 'valor', fk: 'valor_id' }];
-        
         for (let d of dMaq) {
             const opts = await (await fetch(`${API}/options/${d.table}?userId=${usuarioActual.id}`)).json();
             html += `<div class="col-md-4 mb-2"><label class="filter-label">${d.label}</label><select name="${d.fk}" class="form-select" required><option value="">--</option>`;
@@ -460,13 +419,8 @@
     document.getElementById('btnConfirmarAccion').onclick = async () => {
         const res = await fetch(`${API}/${targetDelete.tabla}/${targetDelete.id}`, { method: 'DELETE' });
         modalConfirm.hide();
-        if (res.status === 409) {
-            const data = await res.json();
-            document.getElementById('msgErrorRelacion').innerText = data.message;
-            setTimeout(() => modalError.show(), 300);
-        } else if (res.ok) { cargarTabla(); }
+        if (res.status === 409) { const data = await res.json(); document.getElementById('msgErrorRelacion').innerText = data.message; setTimeout(() => modalError.show(), 300); } else if (res.ok) { cargarTabla(); }
     };
-
     function cerrarSesion() { localStorage.removeItem('usuarioInventario'); usuarioActual = null; document.getElementById('view-app').style.display = 'none'; document.getElementById('view-login').style.display = 'flex'; }
     function cancelarFormulario() { document.getElementById('section-formulario').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
@@ -475,6 +429,13 @@
     function exportarExcel() { const ws = XLSX.utils.json_to_sheet(currentFiltered.map(m => ({ "Nombre": m.nombre, "Serial": m.serial, "Grupo": m.grupo_nom, "Sala": m.sala_nom, "Marca": m.marca_nom, "Modelo": m.modelo_nom, "Juego": m.juego_nom, "Estado": m.estado_nom, "Sociedad": m.sociedad_nom, "Valor": m.valor_nom }))); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventario"); XLSX.writeFile(wb, "Inventario.xlsx"); }
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
+    // REGISTRO DEL SERVICE WORKER PARA PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail', err));
+      });
+    }
+
     verificarSesion();
 </script>
 </body>
