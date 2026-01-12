@@ -63,6 +63,8 @@
             <a onclick="cambiarVista('juego')" id="link-juego">Juegos</a>
             <a onclick="cambiarVista('marca')" id="link-marca">Marcas</a>
             <a onclick="cambiarVista('modelo')" id="link-modelo">Modelos</a>
+            <a onclick="cambiarVista('tipo')" id="link-tipo">Tipos</a>
+            <a onclick="cambiarVista('modo')" id="link-modo">Modos</a>
         </div>
         <div class="sidebar-user-info" onclick="irAVistaUsuarios()">
             <span class="user-name" id="display-user-name">---</span>
@@ -90,6 +92,8 @@
                         <div class="col-md-3"><label class="filter-label">Estado</label><select id="f-estado" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
                         <div class="col-md-3"><label class="filter-label">Sociedad</label><select id="f-sociedad" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
                         <div class="col-md-3"><label class="filter-label">Valor</label><select id="f-valor" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Tipo</label><select id="f-tipo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-3"><label class="filter-label">Modo</label><select id="f-modo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
                         <div class="col-md-4 mt-3"><button class="btn btn-secondary btn-action w-100" onclick="resetFiltros()">Limpiar</button></div>
                         <div class="col-md-4 mt-3"><button class="btn btn-warning btn-action w-100 fw-bold" onclick="exportarExcel()">Excel</button></div>
                         <div class="col-md-4 mt-3"><button class="btn btn-primary btn-action w-100 fw-bold" onclick="window.print()">Imprimir</button></div>
@@ -203,7 +207,7 @@
         const f = {
             Grupo: getS('f-grupo'), Sala: getS('f-sucursal'), Marca: getS('f-marca'),
             Modelo: getS('f-modelo'), Juego: getS('f-juego'), Estado: getS('f-estado'),
-            Sociedad: getS('f-sociedad'), Valor: getS('f-valor')
+            Sociedad: getS('f-sociedad'), Valor: getS('f-valor'), Tipo: getS('f-tipo'), Modo: getS('f-modo')
         };
         currentFiltered = allData.filter(m => 
             ((m.nombre || "").toLowerCase().includes(fNombre)) && 
@@ -215,7 +219,9 @@
             (f.Juego === "" || (m.juego_nom || "") === f.Juego) &&
             (f.Estado === "" || (m.estado_nom || "") === f.Estado) &&
             (f.Sociedad === "" || (m.sociedad_nom || "") === f.Sociedad) &&
-            (f.Valor === "" || (m.valor_nom || "") === f.Valor)
+            (f.Valor === "" || (m.valor_nom || "") === f.Valor) &&
+            (f.Tipo === "" || (m.tipo_nom || "") === f.Tipo) &&
+            (f.Modo === "" || (m.modo_nom || "") === f.Modo)
         );
         renderizarTabla(currentFiltered);
         actualizarDropdownsDinamicos(currentFiltered);
@@ -226,8 +232,8 @@
         const titles = document.getElementById('tHeadTitles'), body = document.getElementById('tBody');
         const styleAcc = (usuarioActual.nivel == 3) ? 'display:none' : '';
         if(vista === 'maquina') {
-            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th class="text-center" style="${styleAcc}">Acciones</th>`;
-            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td><b>${i.nombre}</b></td><td><span class="badge bg-dark">${i.serial}</span></td><td>${i.grupo_nom || '-'}</td><td>${i.sala_nom || '-'}</td><td>${i.marca_nom || '-'}</td><td>${i.modelo_nom || '-'}</td><td>${i.juego_nom || '-'}</td><td>${i.estado_nom || '-'}</td><td>${i.sociedad_nom || '-'}</td><td>${i.valor_nom || '-'}</td><td class="text-center" style="${styleAcc}"><button onclick="abrirEditorMaquina(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, 'maquina')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
+            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th>Tipo</th><th>Modo</th><th class="text-center" style="${styleAcc}">Acciones</th>`;
+            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td><b>${i.nombre}</b></td><td><span class="badge bg-dark">${i.serial}</span></td><td>${i.grupo_nom || '-'}</td><td>${i.sala_nom || '-'}</td><td>${i.marca_nom || '-'}</td><td>${i.modelo_nom || '-'}</td><td>${i.juego_nom || '-'}</td><td>${i.estado_nom || '-'}</td><td>${i.sociedad_nom || '-'}</td><td>${i.valor_nom || '-'}</td><td>${i.tipo_nom || '-'}</td><td>${i.modo_nom || '-'}</td><td class="text-center" style="${styleAcc}"><button onclick="abrirEditorMaquina(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, 'maquina')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
         } else if (vista === 'sucursal' || vista === 'modelo') {
             const padre = (vista === 'sucursal') ? 'Grupo' : 'Marca';
             const nomPadre = (vista === 'sucursal') ? 'grupo_nom' : 'marca_nom';
@@ -356,7 +362,7 @@
     }
 
     function actualizarDropdownsDinamicos(data) {
-        const conf = {'f-grupo':'grupo_nom','f-sucursal':'sala_nom','f-marca':'marca_nom','f-modelo':'modelo_nom','f-juego':'juego_nom','f-estado':'estado_nom','f-sociedad':'sociedad_nom','f-valor':'valor_nom'};
+        const conf = {'f-grupo':'grupo_nom','f-sucursal':'sala_nom','f-marca':'marca_nom','f-modelo':'modelo_nom','f-juego':'juego_nom','f-estado':'estado_nom','f-sociedad':'sociedad_nom','f-valor':'valor_nom','f-tipo':'tipo_nom','f-modo':'modo_nom'};
         Object.keys(conf).forEach(id => { 
             const s = document.getElementById(id); 
             if(!s || document.activeElement === s) return; 
@@ -380,7 +386,7 @@
     function abrirVistaDetalles(isRefresh = false) {
         if(!isRefresh) { document.getElementById('section-lista').style.display = 'none'; document.getElementById('section-detalles').style.display = 'block'; }
         const cont = document.getElementById('containerTablasDetalles'); cont.innerHTML = "";
-        const cats = [{ label: 'Grupos', key: 'grupo_nom' }, { label: 'Salas', key: 'sala_nom' }, { label: 'Marcas', key: 'marca_nom' }, { label: 'Modelos', key: 'modelo_nom' }, { label: 'Juegos', key: 'juego_nom' }, { label: 'Estados', key: 'estado_nom' }, { label: 'Sociedades', key: 'sociedad_nom' }, { label: 'Valores', key: 'valor_nom' }];
+        const cats = [{ label: 'Grupos', key: 'grupo_nom' }, { label: 'Salas', key: 'sala_nom' }, { label: 'Marcas', key: 'marca_nom' }, { label: 'Modelos', key: 'modelo_nom' }, { label: 'Juegos', key: 'juego_nom' }, { label: 'Estados', key: 'estado_nom' }, { label: 'Sociedades', key: 'sociedad_nom' }, { label: 'Valores', key: 'valor_nom' },{ label: 'Tipos', key: 'tipo_nom' },{ label: 'Modos', key: 'modo_nom' }];
         cats.forEach(c => {
             const count = {}; currentFiltered.forEach(m => { let l = (c.key === 'modelo_nom') ? `${m.modelo_nom || 'N/A'} (${m.marca_nom || 'N/A'})` : (c.key === 'sala_nom') ? `${m.sala_nom || 'N/A'} (${m.grupo_nom || 'N/A'})` : m[c.key] || 'N/A'; count[l] = (count[l] || 0) + 1; });
             const sorted = Object.entries(count).sort((a,b) => b[1] - a[1]);
@@ -451,7 +457,9 @@
             { label: 'Juego', table: 'juego', fk: 'juego_id' }, 
             { label: 'Estado', table: 'estado', fk: 'estado_id' }, 
             { label: 'Sociedad', table: 'sociedad', fk: 'sociedad_id' }, 
-            { label: 'Valor', table: 'valor', fk: 'valor_id' }
+            { label: 'Valor', table: 'valor', fk: 'valor_id' },
+            { label: 'Tipo', table: 'tipo', fk: 'tipo_id' },
+            { label: 'Modo', table: 'modo', fk: 'modo_id' }
         ];
 
         // 3. Ejecutamos el ciclo para construir los selectores dinámicamente
