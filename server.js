@@ -26,6 +26,21 @@ db.connect((err) => {
     else console.log('Conectado exitosamente a MySQL en Localhost');
 });
 
+// --- FUNCIONES DE AYUDA (Helpers) ---
+
+function procesarDatosMaquina(data) {
+    let limpio = { ...data };
+    // Lógica para Serial
+    if (!limpio.serial || limpio.serial.trim() === "" || limpio.serial.toUpperCase() === "N/A") {
+        limpio.serial = "N/A";
+    }
+    // Lógica para Puestos (Asegura número y mínimo 1)
+    limpio.puestos = parseInt(limpio.puestos) || 1;
+    if (limpio.puestos < 1) limpio.puestos = 1;
+    
+    return limpio;
+}
+
 // --- RUTAS API ---
 
 app.post('/api/login', (req, res) => {
@@ -130,7 +145,12 @@ app.get('/api/:tabla/:id', (req, res) => {
 
 app.post('/api/:tabla', (req, res) => {
     const { tabla } = req.params;
-    const data = req.body;
+    let data = req.body;
+
+    if (tabla === 'maquina') {
+        data = procesarDatosMaquina(data); // Aplicamos la limpieza
+    }
+
     db.query(`INSERT INTO ${tabla} SET ?`, data, (err, result) => {
         if (err) return res.status(500).send(err.message);
         res.json({ id: result.insertId, ...data });
@@ -139,7 +159,12 @@ app.post('/api/:tabla', (req, res) => {
 
 app.put('/api/:tabla/:id', (req, res) => {
     const { tabla, id } = req.params;
-    const data = req.body;
+    let data = req.body;
+
+    if (tabla === 'maquina') {
+        data = procesarDatosMaquina(data); // Aplicamos la limpieza también al editar
+    }
+
     db.query(`UPDATE ${tabla} SET ? WHERE id = ?`, [data, id], (err) => {
         if (err) return res.status(500).send(err.message);
         res.json({ success: true });

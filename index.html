@@ -273,6 +273,15 @@
         if(!activeInput.parentNode.querySelector('.feedback-error')) { activeInput.parentNode.appendChild(errorMsg); }
         activeInput.addEventListener('keyup', async () => {
             const valor = activeInput.value.trim();
+
+            // NUEVA EXCEPCIÓN PARA "N/A"
+            if (campo === 'serial' && (valor === "" || valor.toUpperCase() === 'N/A')) {
+                activeInput.classList.remove('is-invalid');
+                errorMsg.style.display = 'none';
+                if(btn) btn.disabled = false;
+                return; // Detiene la validación aquí para que no consulte a la API
+            }
+
             if (valor.length < 2) {
                  activeInput.classList.remove('is-invalid');
                  errorMsg.style.display = 'none';
@@ -411,18 +420,69 @@
     }
     
     async function abrirEditorMaquina(id = null) {
-        editId = id; document.getElementById('section-lista').style.display = 'none'; document.getElementById('section-formulario').style.display = 'block';
+        editId = id; 
+        document.getElementById('section-lista').style.display = 'none'; 
+        document.getElementById('section-formulario').style.display = 'block';
         const container = document.getElementById('camposMaquina');
-        let current = id ? await (await fetch(`${API}/maquina/${id}`)).json() : {};
-        let html = `<div class="col-md-6 mb-2"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div><div class="col-md-6 mb-2"><label class="filter-label">Serial</label><input type="text" name="serial" class="form-control" value="${current.serial || ''}" required></div>`;
-        const dMaq = [{ label: 'Sala / Grupo', table: 'sucursal', fk: 'sucursal_id', grouped: true }, { label: 'Marca / Modelo', table: 'modelo', fk: 'modelo_id', grouped: true }, { label: 'Juego', table: 'juego', fk: 'juego_id' }, { label: 'Estado', table: 'estado', fk: 'estado_id' }, { label: 'Sociedad', table: 'sociedad', fk: 'sociedad_id' }, { label: 'Valor', table: 'valor', fk: 'valor_id' }];
+
+        // Cambiamos {} por { puestos: 1 } para que las máquinas nuevas tengan valor inicial
+        let current = id ? await (await fetch(`${API}/maquina/${id}`)).json() : { puestos: 1 };
+
+        // 1. Iniciamos el HTML con los 3 campos de texto/número (Nombre, Serial, Puestos)
+        // Usamos col-md-4 para que los tres queden en una sola fila arriba
+        let html = `
+            <div class="col-md-4 mb-2">
+                <label class="filter-label">Nombre</label>
+                <input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required>
+            </div>
+            <div class="col-md-4 mb-2">
+                <label class="filter-label">Serial</label>
+                <input type="text" name="serial" class="form-control" value="${current.serial || ''}" placeholder="Dejar vacío para N/A">
+            </div>
+            <div class="col-md-4 mb-2">
+                <label class="filter-label">Puestos</label>
+                <input type="number" name="puestos" class="form-control" value="${current.puestos || 1}" min="1" onkeypress="return event.charCode >= 48" required>
+            </div>`;
+
+        // 2. Mantenemos tu arreglo original de configuración para los selectores
+        const dMaq = [
+            { label: 'Sala / Grupo', table: 'sucursal', fk: 'sucursal_id', grouped: true }, 
+            { label: 'Marca / Modelo', table: 'modelo', fk: 'modelo_id', grouped: true }, 
+            { label: 'Juego', table: 'juego', fk: 'juego_id' }, 
+            { label: 'Estado', table: 'estado', fk: 'estado_id' }, 
+            { label: 'Sociedad', table: 'sociedad', fk: 'sociedad_id' }, 
+            { label: 'Valor', table: 'valor', fk: 'valor_id' }
+        ];
+
+        // 3. Ejecutamos el ciclo para construir los selectores dinámicamente
         for (let d of dMaq) {
             const opts = await (await fetch(`${API}/options/${d.table}?userId=${usuarioActual.id}`)).json();
             html += `<div class="col-md-4 mb-2"><label class="filter-label">${d.label}</label><select name="${d.fk}" class="form-select" required><option value="">--</option>`;
-            if (d.grouped) { const g = {}; opts.forEach(o => { const p = o.parent_nom || 'Otros'; if (!g[p]) g[p] = []; g[p].push(o); }); for (const p in g) { html += `<optgroup label="${p.toUpperCase()}">`; g[p].forEach(o => { html += `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`; }); html += `</optgroup>`; }
-            } else { html += opts.map(o => `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`).join(''); } html += `</select></div>`;
+            
+            if (d.grouped) { 
+                const g = {}; 
+                opts.forEach(o => { 
+                    const p = o.parent_nom || 'Otros'; 
+                    if (!g[p]) g[p] = []; 
+                    g[p].push(o); 
+                }); 
+                for (const p in g) { 
+                    html += `<optgroup label="${p.toUpperCase()}">`; 
+                    g[p].forEach(o => { 
+                        html += `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`; 
+                    }); 
+                    html += `</optgroup>`; 
+                }
+            } else { 
+                html += opts.map(o => `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`).join(''); 
+            } 
+            html += `</select></div>`;
         }
+
+        // 4. Inyectamos todo el HTML generado en el contenedor
         container.innerHTML = html;
+
+        // 5. Activamos la validación de serial (recuerda aplicar la excepción para N/A que te pasé antes)
         activarValidacionEnInput('input[name="serial"]', 'maquina', 'serial', 'btnGuardarMaquina', id);
     }
     
