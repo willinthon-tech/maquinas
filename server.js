@@ -133,22 +133,24 @@ app.get('/api/:tabla', (req, res) => {
     let sql = "";
     if (tabla === 'maquina') {
         sql = `SELECT m.*, 
-           g.nombre as grupo_nom, s.nombre as sala_nom, 
-           ma.nombre as marca_nom, mo.nombre as modelo_nom, 
-           j.nombre as juego_nom, e.nombre as estado_nom, 
-           so.nombre as sociedad_nom, v.nombre as valor_nom,
-           t.nombre as tipo_nom, md.nombre as modo_nom 
-           FROM maquina m 
-           LEFT JOIN sucursal s ON m.sucursal_id = s.id 
-           LEFT JOIN grupo g ON s.grupo_id = g.id 
-           LEFT JOIN modelo mo ON m.modelo_id = mo.id 
-           LEFT JOIN marca ma ON mo.marca_id = ma.id 
-           LEFT JOIN juego j ON m.juego_id = j.id 
-           LEFT JOIN estado e ON m.estado_id = e.id 
-           LEFT JOIN sociedad so ON m.sociedad_id = so.id 
-           LEFT JOIN valor v ON m.valor_id = v.id
-           LEFT JOIN tipo t ON m.tipo_id = t.id
-           LEFT JOIN modo md ON m.modo_id = md.id`;
+            g.nombre as grupo_nom, s.nombre as sala_nom, 
+            ma.nombre as marca_nom, mo.nombre as modelo_nom, 
+            j.nombre as juego_nom, e.nombre as estado_nom, 
+            so.nombre as sociedad_nom, v.nombre as valor_nom,
+            t.nombre as tipo_nom, md.nombre as modo_nom,
+            l.nombre as legal_nom 
+            FROM maquina m 
+            LEFT JOIN sucursal s ON m.sucursal_id = s.id 
+            LEFT JOIN grupo g ON s.grupo_id = g.id 
+            LEFT JOIN modelo mo ON m.modelo_id = mo.id 
+            LEFT JOIN marca ma ON mo.marca_id = ma.id 
+            LEFT JOIN juego j ON m.juego_id = j.id 
+            LEFT JOIN estado e ON m.estado_id = e.id 
+            LEFT JOIN sociedad so ON m.sociedad_id = so.id 
+            LEFT JOIN valor v ON m.valor_id = v.id
+            LEFT JOIN tipo t ON m.tipo_id = t.id
+            LEFT JOIN modo md ON m.modo_id = md.id
+            LEFT JOIN legal l ON m.legal_id = l.id`;
         if (userId && userId !== 'undefined') { 
             sql += ` INNER JOIN usuario_sucursal us ON m.sucursal_id = us.sucursal_id WHERE us.usuario_id = ${mysql.escape(userId)}`; 
         }

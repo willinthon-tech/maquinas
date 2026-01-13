@@ -65,6 +65,7 @@
             <a onclick="cambiarVista('modelo')" id="link-modelo">Modelos</a>
             <a onclick="cambiarVista('tipo')" id="link-tipo">Tipos</a>
             <a onclick="cambiarVista('modo')" id="link-modo">Modos</a>
+            <a onclick="cambiarVista('legal')" id="link-legal">Legal</a>
         </div>
         <div class="sidebar-user-info" onclick="irAVistaUsuarios()">
             <span class="user-name" id="display-user-name">---</span>
@@ -82,18 +83,19 @@
             <div class="card mb-3" id="panelFiltros" style="display:none;">
                 <div class="card-body p-3">
                     <div class="row g-2">
-                        <div class="col-md-2"><label class="filter-label">Nombre</label><input type="text" id="f-nombre" class="form-control form-filter shadow-none"></div>
-                        <div class="col-md-2"><label class="filter-label">Serial</label><input type="text" id="f-serial" class="form-control form-filter shadow-none"></div>
-                        <div class="col-md-2"><label class="filter-label">Grupo</label><select id="f-grupo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Sala</label><select id="f-sucursal" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Marca</label><select id="f-marca" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Modelo</label><select id="f-modelo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Juego</label><select id="f-juego" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Estado</label><select id="f-estado" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Sociedad</label><select id="f-sociedad" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Valor</label><select id="f-valor" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Tipo</label><select id="f-tipo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Modo</label><select id="f-modo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-12"><label class="filter-label">Nombre</label><input type="text" id="f-nombre" class="form-control form-filter shadow-none"></div>
+                        <div class="col-md-1"><label class="filter-label">Serial</label><input type="text" id="f-serial" class="form-control form-filter shadow-none"></div>
+                        <div class="col-md-1"><label class="filter-label">Grupo</label><select id="f-grupo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Sala</label><select id="f-sucursal" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Marca</label><select id="f-marca" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Modelo</label><select id="f-modelo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Juego</label><select id="f-juego" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Estado</label><select id="f-estado" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Sociedad</label><select id="f-sociedad" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Valor</label><select id="f-valor" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Tipo</label><select id="f-tipo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Modo</label><select id="f-modo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-1"><label class="filter-label">Legal</label><select id="f-legal" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
                     </div>
                     <div class="row g-2">
                         <div class="col-md-4 mt-3"><button class="btn btn-secondary btn-action w-100" onclick="resetFiltros()">Limpiar</button></div>
@@ -209,7 +211,7 @@
         const f = {
             Grupo: getS('f-grupo'), Sala: getS('f-sucursal'), Marca: getS('f-marca'),
             Modelo: getS('f-modelo'), Juego: getS('f-juego'), Estado: getS('f-estado'),
-            Sociedad: getS('f-sociedad'), Valor: getS('f-valor'), Tipo: getS('f-tipo'), Modo: getS('f-modo')
+            Sociedad: getS('f-sociedad'), Valor: getS('f-valor'), Tipo: getS('f-tipo'), Modo: getS('f-modo'),  Legal: getS('f-legal')
         };
         currentFiltered = allData.filter(m => 
             ((m.nombre || "").toLowerCase().includes(fNombre)) && 
@@ -223,7 +225,8 @@
             (f.Sociedad === "" || (m.sociedad_nom || "") === f.Sociedad) &&
             (f.Valor === "" || (m.valor_nom || "") === f.Valor) &&
             (f.Tipo === "" || (m.tipo_nom || "") === f.Tipo) &&
-            (f.Modo === "" || (m.modo_nom || "") === f.Modo)
+            (f.Modo === "" || (m.modo_nom || "") === f.Modo) &&
+            (f.Legal === "" || (m.legal_nom || "") === f.Legal)
         );
         renderizarTabla(currentFiltered);
         actualizarDropdownsDinamicos(currentFiltered);
@@ -234,7 +237,7 @@
         const titles = document.getElementById('tHeadTitles'), body = document.getElementById('tBody');
         const styleAcc = (usuarioActual.nivel == 3) ? 'display:none' : '';
         if(vista === 'maquina') {
-            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th>Tipo</th><th>Puestos</th><th>Modo</th><th class="text-center" style="${styleAcc}">Acciones</th>`;
+            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th>Tipo</th><th>Puestos</th><th>Modo</th><th>Legal</th><th class="text-center" style="${styleAcc}">Acciones</th>`;
             // Dentro de renderizarTabla, en la sección de vista === 'maquina'
             body.innerHTML = data.map(i => {
                 // Definimos el color del badge: si es N/A es rojo (danger), si no, es oscuro (dark)
@@ -256,6 +259,7 @@
                         <td>${i.tipo_nom || '-'}</td>
                         <td class="fw-bold text-center">${i.puestos || '1'}</td>
                         <td>${i.modo_nom || '-'}</td>
+                        <td>${i.legal_nom || '-'}</td>
                         <td class="text-center" style="${styleAcc}">
                             <button onclick="abrirEditorMaquina(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> 
                             <button onclick="solicitarEliminar(${i.id}, 'maquina')" class="btn btn-outline-danger btn-action ms-1">Borrar</button>
@@ -390,7 +394,7 @@
     }
 
     function actualizarDropdownsDinamicos(data) {
-        const conf = {'f-grupo':'grupo_nom','f-sucursal':'sala_nom','f-marca':'marca_nom','f-modelo':'modelo_nom','f-juego':'juego_nom','f-estado':'estado_nom','f-sociedad':'sociedad_nom','f-valor':'valor_nom','f-tipo':'tipo_nom','f-modo':'modo_nom'};
+        const conf = {'f-grupo':'grupo_nom','f-sucursal':'sala_nom','f-marca':'marca_nom','f-modelo':'modelo_nom','f-juego':'juego_nom','f-estado':'estado_nom','f-sociedad':'sociedad_nom','f-valor':'valor_nom','f-tipo':'tipo_nom','f-modo':'modo_nom','f-legal':'legal_nom'};
         Object.keys(conf).forEach(id => { 
             const s = document.getElementById(id); 
             if(!s || document.activeElement === s) return; 
@@ -414,7 +418,7 @@
     function abrirVistaDetalles(isRefresh = false) {
         if(!isRefresh) { document.getElementById('section-lista').style.display = 'none'; document.getElementById('section-detalles').style.display = 'block'; }
         const cont = document.getElementById('containerTablasDetalles'); cont.innerHTML = "";
-        const cats = [{ label: 'Grupos', key: 'grupo_nom' }, { label: 'Salas', key: 'sala_nom' }, { label: 'Marcas', key: 'marca_nom' }, { label: 'Modelos', key: 'modelo_nom' }, { label: 'Juegos', key: 'juego_nom' }, { label: 'Estados', key: 'estado_nom' }, { label: 'Sociedades', key: 'sociedad_nom' }, { label: 'Valores', key: 'valor_nom' },{ label: 'Tipos', key: 'tipo_nom' },{ label: 'Modos', key: 'modo_nom' }];
+        const cats = [{ label: 'Grupos', key: 'grupo_nom' }, { label: 'Salas', key: 'sala_nom' }, { label: 'Marcas', key: 'marca_nom' }, { label: 'Modelos', key: 'modelo_nom' }, { label: 'Juegos', key: 'juego_nom' }, { label: 'Estados', key: 'estado_nom' }, { label: 'Sociedades', key: 'sociedad_nom' }, { label: 'Valores', key: 'valor_nom' },{ label: 'Tipos', key: 'tipo_nom' },{ label: 'Modos', key: 'modo_nom' }, ,{ label: 'Legal', key: 'legal_nom' }];
         cats.forEach(c => {
             const count = {}; currentFiltered.forEach(m => { let l = (c.key === 'modelo_nom') ? `${m.modelo_nom || 'N/A'} (${m.marca_nom || 'N/A'})` : (c.key === 'sala_nom') ? `${m.sala_nom || 'N/A'} (${m.grupo_nom || 'N/A'})` : m[c.key] || 'N/A'; count[l] = (count[l] || 0) + 1; });
             const sorted = Object.entries(count).sort((a,b) => b[1] - a[1]);
@@ -487,7 +491,8 @@
             { label: 'Sociedad', table: 'sociedad', fk: 'sociedad_id' }, 
             { label: 'Valor', table: 'valor', fk: 'valor_id' },
             { label: 'Tipo', table: 'tipo', fk: 'tipo_id' },
-            { label: 'Modo', table: 'modo', fk: 'modo_id' }
+            { label: 'Modo', table: 'modo', fk: 'modo_id' },
+            { label: 'Legal', table: 'legal', fk: 'legal_id' },
         ];
 
         // 3. Ejecutamos el ciclo para construir los selectores dinámicamente
@@ -573,9 +578,9 @@
     function cerrarSesion() { localStorage.removeItem('usuarioInventario'); usuarioActual = null; document.getElementById('view-app').style.display = 'none'; document.getElementById('view-login').style.display = 'flex'; }
     function cancelarFormulario() { document.getElementById('section-formulario').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
-    function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
+    function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor','f-tipo','f-modo','f-legal'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
     function controladorAccionNuevo() { if(vista === 'maquina') abrirEditorMaquina(); else abrirModalParametro(); }
-    function exportarExcel() { const ws = XLSX.utils.json_to_sheet(currentFiltered.map(m => ({ "Nombre": m.nombre, "Serial": m.serial, "Grupo": m.grupo_nom, "Sala": m.sala_nom, "Marca": m.marca_nom, "Modelo": m.modelo_nom, "Juego": m.juego_nom, "Estado": m.estado_nom, "Sociedad": m.sociedad_nom, "Valor": m.valor_nom }))); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventario"); XLSX.writeFile(wb, "Inventario.xlsx"); }
+    function exportarExcel() { const ws = XLSX.utils.json_to_sheet(currentFiltered.map(m => ({ "Nombre": m.nombre, "Serial": m.serial, "Grupo": m.grupo_nom, "Sala": m.sala_nom, "Marca": m.marca_nom, "Modelo": m.modelo_nom, "Juego": m.juego_nom, "Estado": m.estado_nom, "Sociedad": m.sociedad_nom, "Valor": m.valor_nom, "Tipo": m.tipo_nom, "Modo": m.modo_nom, "Legal": m.legal_nom }))); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventario"); XLSX.writeFile(wb, "Inventario.xlsx"); }
     
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
