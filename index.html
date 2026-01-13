@@ -582,110 +582,137 @@
     function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor','f-tipo','f-modo','f-legal'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
     function controladorAccionNuevo() { if(vista === 'maquina') abrirEditorMaquina(); else abrirModalParametro(); }
     async function exportarExcel() {
-        if (currentFiltered.length === 0) return alert("No hay datos para exportar");
+    if (currentFiltered.length === 0) return alert("No hay datos para exportar");
 
-        // Creamos el libro de trabajo
-        const workbook = new ExcelJS.Workbook();
+    const workbook = new ExcelJS.Workbook();
+    
+    // --- FUNCIÓN HELPER PARA CREAR HOJAS CON ESTILO ---
+    const agregarHoja = (nombreHoja, datos) => {
+        // Limpiamos nombre
+        const safeName = (nombreHoja || "Sin Sala").substring(0, 30).replace(/[\/\\\?\*\]\[]/g, '-');
+        const worksheet = workbook.addWorksheet(safeName);
+
+        // 1. Definimos las columnas
+        worksheet.columns = [
+            { header: 'NOMBRE DE MÁQUINA', key: 'nombre' },
+            { header: 'SERIAL', key: 'serial' },
+            { header: 'PST', key: 'puestos' },
+            { header: 'GRUPO', key: 'grupo' },
+            { header: 'SALA', key: 'sala' },
+            { header: 'MARCA', key: 'marca' },
+            { header: 'MODELO', key: 'modelo' },
+            { header: 'JUEGO', key: 'juego' },
+            { header: 'ESTADO', key: 'estado' },
+            { header: 'LEGAL', key: 'legal' },
+            { header: 'MODO', key: 'modo' },
+            { header: 'VALOR', key: 'valor' }
+        ];
+
+        // 2. Agregamos los datos
+        datos.forEach(m => {
+            worksheet.addRow({
+                nombre: (m.nombre || "").toUpperCase(),
+                serial: (m.serial || "N/A").toUpperCase(),
+                puestos: m.puestos || 1,
+                grupo: (m.grupo_nom || "").toUpperCase(),
+                sala: (m.sala_nom || "").toUpperCase(),
+                marca: (m.marca_nom || "").toUpperCase(),
+                modelo: (m.modelo_nom || "").toUpperCase(),
+                juego: (m.juego_nom || "").toUpperCase(),
+                estado: (m.estado_nom || "").toUpperCase(),
+                legal: (m.legal_nom || "PENDIENTE").toUpperCase(),
+                modo: (m.modo_nom || "").toUpperCase(),
+                valor: (m.valor_nom || "").toUpperCase()
+            });
+        });
+
+        // 3. ESTILO DEL ENCABEZADO (Títulos Grandes)
+        const headerRow = worksheet.getRow(1);
+        headerRow.height = 30; // Hacemos la fila más alta para que quepa la letra grande
         
-        // --- FUNCIÓN HELPER PARA CREAR HOJAS ---
-        // Esta función se encarga de todo el diseño "bonito" y repetitivo
-        const agregarHoja = (nombreHoja, datos) => {
-            // Limpiamos el nombre de la hoja (Excel no permite caracteres raros ni nombres muy largos)
-            const safeName = (nombreHoja || "Sin Sala").substring(0, 30).replace(/[\/\\\?\*\]\[]/g, '-');
-            const worksheet = workbook.addWorksheet(safeName);
+        headerRow.eachCell((cell) => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } }; // Azul Oscuro Elegante
+            cell.font = { 
+                color: { argb: 'FFFFFFFF' }, // Blanco
+                bold: true, 
+                size: 14, // <--- LETRA MÁS GRANDE (Solicitado)
+                name: 'Calibri'
+            };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        });
 
-            // 1. Definimos las columnas (Sin ancho fijo, lo calcularemos luego)
-            worksheet.columns = [
-                { header: 'NOMBRE DE MÁQUINA', key: 'nombre' },
-                { header: 'SERIAL', key: 'serial' },
-                { header: 'PST', key: 'puestos' },
-                { header: 'GRUPO', key: 'grupo' },
-                { header: 'SALA', key: 'sala' },
-                { header: 'MARCA', key: 'marca' },
-                { header: 'MODELO', key: 'modelo' },
-                { header: 'JUEGO', key: 'juego' },
-                { header: 'ESTADO', key: 'estado' },
-                { header: 'LEGAL', key: 'legal' },
-                { header: 'MODO', key: 'modo' },
-                { header: 'VALOR', key: 'valor' }
-            ];
+        // 4. ESTILO "ZEBRA" PARA LAS FILAS DE DATOS (Facilita la lectura)
+        // Empezamos desde la fila 2 hasta el final
+        worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber > 1) { // Ignoramos el encabezado
+                row.eachCell({ includeEmpty: true }, (cell) => {
+                    // Bordes finos para todas las celdas
+                    cell.border = { 
+                        top: {style:'thin', color: {argb:'FFD9D9D9'}}, 
+                        left: {style:'thin', color: {argb:'FFD9D9D9'}}, 
+                        bottom: {style:'thin', color: {argb:'FFD9D9D9'}}, 
+                        right: {style:'thin', color: {argb:'FFD9D9D9'}} 
+                    };
 
-            // 2. Agregamos los datos
-            datos.forEach(m => {
-                worksheet.addRow({
-                    nombre: (m.nombre || "").toUpperCase(),
-                    serial: (m.serial || "N/A").toUpperCase(),
-                    puestos: m.puestos || 1,
-                    grupo: (m.grupo_nom || "").toUpperCase(),
-                    sala: (m.sala_nom || "").toUpperCase(),
-                    marca: (m.marca_nom || "").toUpperCase(),
-                    modelo: (m.modelo_nom || "").toUpperCase(),
-                    juego: (m.juego_nom || "").toUpperCase(),
-                    estado: (m.estado_nom || "").toUpperCase(),
-                    legal: (m.legal_nom || "PENDIENTE").toUpperCase(),
-                    modo: (m.modo_nom || "").toUpperCase(),
-                    valor: (m.valor_nom || "").toUpperCase()
+                    // Si la fila es PAR, le ponemos un fondo azul muy clarito
+                    if (rowNumber % 2 === 0) {
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFEBF1DE' } // Un tono gris/verdoso muy suave y moderno (o usa 'FFE1EAF3' para azulito)
+                        };
+                    }
                 });
-            });
-
-            // 3. ESTILO DEL ENCABEZADO (Azul y Blanco)
-            const headerRow = worksheet.getRow(1);
-            headerRow.eachCell((cell) => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF004B9B' } }; // Azul
-                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 11 }; // Blanco
-                cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-            });
-
-            // 4. AUTO-AJUSTE DINÁMICO DE COLUMNAS
-            // Recorremos cada columna para encontrar el texto más largo
-            worksheet.columns.forEach(column => {
-                let maxLength = 0;
-                column.eachCell({ includeEmpty: true }, function(cell) {
-                    const columnLength = cell.value ? cell.value.toString().length : 10;
-                    if (columnLength > maxLength) maxLength = columnLength;
-                });
-                column.width = maxLength < 10 ? 10 : maxLength + 2; // Mínimo 10, más un "aire" de 2
-            });
-
-            // 5. FILTROS Y CONGELAR PANELES (1 Columna y 1 Fila)
-            worksheet.autoFilter = { from: 'A1', to: { row: 1, column: worksheet.columns.length } };
-            worksheet.views = [
-                { state: 'frozen', xSplit: 1, ySplit: 1 } // Congela Columna A (Nombre) y Fila 1 (Títulos)
-            ];
-        };
-
-        // --- PASO 1: CREAR HOJA GENERAL (CON TODO) ---
-        agregarHoja("GENERAL - TODO", currentFiltered);
-
-        // --- PASO 2: CREAR HOJAS POR SALA ---
-        // Obtenemos lista única de salas
-        const salasUnicas = [...new Set(currentFiltered.map(item => item.sala_nom || "Sin Asignar"))];
-
-        // Recorremos cada sala y creamos su hoja
-        salasUnicas.forEach(sala => {
-            const datosSala = currentFiltered.filter(item => (item.sala_nom || "Sin Asignar") === sala);
-            if (datosSala.length > 0) {
-                agregarHoja(sala, datosSala);
             }
         });
 
-        // --- PASO 3: DESCARGAR ---
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = window.URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
+        // 5. AUTO-AJUSTE DINÁMICO DE COLUMNAS
+        worksheet.columns.forEach(column => {
+            let maxLength = 0;
+            column.eachCell({ includeEmpty: true }, function(cell) {
+                const columnLength = cell.value ? cell.value.toString().length : 10;
+                if (columnLength > maxLength) maxLength = columnLength;
+            });
+            // Le damos un poco más de espacio por la letra grande del título
+            column.width = maxLength < 12 ? 12 : maxLength + 3; 
+        });
+
+        // 6. ACTIVAR FILTROS (Sin congelar paneles)
+        worksheet.autoFilter = { from: 'A1', to: { row: 1, column: worksheet.columns.length } };
         
-        // Nombre del archivo
-        const hoy = new Date();
-        const fechaStr = hoy.toLocaleDateString().replace(/\//g, '-');
-        const horaStr = hoy.getHours() + "h" + hoy.getMinutes();
-        
-        anchor.download = `Inventario_MultiHoja_${fechaStr}_${horaStr}.xlsx`;
-        anchor.click();
-        window.URL.revokeObjectURL(url);
-    }
+        // NOTA: Eliminé la línea de 'worksheet.views' para quitar el bloqueo de celdas.
+    };
+
+    // --- GENERACIÓN DE HOJAS ---
+    
+    // 1. Hoja General
+    agregarHoja("GENERAL - TODO", currentFiltered);
+
+    // 2. Hojas por Sala
+    const salasUnicas = [...new Set(currentFiltered.map(item => item.sala_nom || "Sin Asignar"))];
+    salasUnicas.forEach(sala => {
+        const datosSala = currentFiltered.filter(item => (item.sala_nom || "Sin Asignar") === sala);
+        if (datosSala.length > 0) {
+            agregarHoja(sala, datosSala);
+        }
+    });
+
+    // --- DESCARGAR ---
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    
+    const hoy = new Date();
+    const fechaStr = hoy.toLocaleDateString().replace(/\//g, '-');
+    const horaStr = hoy.getHours() + "h" + hoy.getMinutes();
+    
+    anchor.download = `Inventario_Maquinas_${fechaStr}_${horaStr}.xlsx`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+}
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
     if ('serviceWorker' in navigator) {
