@@ -584,81 +584,105 @@
     async function exportarExcel() {
         if (currentFiltered.length === 0) return alert("No hay datos para exportar");
 
+        // Creamos el libro de trabajo
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Inventario');
+        
+        // --- FUNCIÓN HELPER PARA CREAR HOJAS ---
+        // Esta función se encarga de todo el diseño "bonito" y repetitivo
+        const agregarHoja = (nombreHoja, datos) => {
+            // Limpiamos el nombre de la hoja (Excel no permite caracteres raros ni nombres muy largos)
+            const safeName = (nombreHoja || "Sin Sala").substring(0, 30).replace(/[\/\\\?\*\]\[]/g, '-');
+            const worksheet = workbook.addWorksheet(safeName);
 
-        // 1. Definir columnas y encabezados
-        worksheet.columns = [
-            { header: 'NOMBRE', key: 'nombre', width: 30 },
-            { header: 'SERIAL', key: 'serial', width: 20 },
-            { header: 'PUESTOS', key: 'puestos', width: 8 },
-            { header: 'GRUPO', key: 'grupo', width: 20 },
-            { header: 'SALA', key: 'sala', width: 25 },
-            { header: 'MARCA', key: 'marca', width: 15 },
-            { header: 'MODELO', key: 'modelo', width: 20 },
-            { header: 'JUEGO', key: 'juego', width: 25 },
-            { header: 'ESTADO', key: 'estado', width: 15 },
-            { header: 'LEGAL', key: 'legal', width: 20 },
-            { header: 'MODO', key: 'modo', width: 15 },
-            { header: 'VALOR', key: 'valor', width: 15 }
-        ];
+            // 1. Definimos las columnas (Sin ancho fijo, lo calcularemos luego)
+            worksheet.columns = [
+                { header: 'NOMBRE DE MÁQUINA', key: 'nombre' },
+                { header: 'SERIAL', key: 'serial' },
+                { header: 'PST', key: 'puestos' },
+                { header: 'GRUPO', key: 'grupo' },
+                { header: 'SALA', key: 'sala' },
+                { header: 'MARCA', key: 'marca' },
+                { header: 'MODELO', key: 'modelo' },
+                { header: 'JUEGO', key: 'juego' },
+                { header: 'ESTADO', key: 'estado' },
+                { header: 'LEGAL', key: 'legal' },
+                { header: 'MODO', key: 'modo' },
+                { header: 'VALOR', key: 'valor' }
+            ];
 
-        // 2. Agregar los datos
-        currentFiltered.forEach(m => {
-            worksheet.addRow({
-                nombre: (m.nombre || "").toUpperCase(),
-                serial: (m.serial || "N/A").toUpperCase(),
-                puestos: m.puestos || 1,
-                grupo: (m.grupo_nom || "").toUpperCase(),
-                sala: (m.sala_nom || "").toUpperCase(),
-                marca: (m.marca_nom || "").toUpperCase(),
-                modelo: (m.modelo_nom || "").toUpperCase(),
-                juego: (m.juego_nom || "").toUpperCase(),
-                estado: (m.estado_nom || "").toUpperCase(),
-                legal: (m.legal_nom || "").toUpperCase(),
-                modo: (m.modo_nom || "").toUpperCase(),
-                valor: (m.valor_nom || "").toUpperCase()
+            // 2. Agregamos los datos
+            datos.forEach(m => {
+                worksheet.addRow({
+                    nombre: (m.nombre || "").toUpperCase(),
+                    serial: (m.serial || "N/A").toUpperCase(),
+                    puestos: m.puestos || 1,
+                    grupo: (m.grupo_nom || "").toUpperCase(),
+                    sala: (m.sala_nom || "").toUpperCase(),
+                    marca: (m.marca_nom || "").toUpperCase(),
+                    modelo: (m.modelo_nom || "").toUpperCase(),
+                    juego: (m.juego_nom || "").toUpperCase(),
+                    estado: (m.estado_nom || "").toUpperCase(),
+                    legal: (m.legal_nom || "PENDIENTE").toUpperCase(),
+                    modo: (m.modo_nom || "").toUpperCase(),
+                    valor: (m.valor_nom || "").toUpperCase()
+                });
             });
-        });
 
-        // 3. DAR ESTILO AL ENCABEZADO (Fila 1)
-        const headerRow = worksheet.getRow(1);
-        
-        headerRow.eachCell((cell) => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FF004B9B' } // Azul corporativo
-            };
-            cell.font = {
-                color: { argb: 'FFFFFFFF' }, // Blanco
-                bold: true,
-                size: 11
-            };
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.border = {
-                top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}
-            };
-        });
+            // 3. ESTILO DEL ENCABEZADO (Azul y Blanco)
+            const headerRow = worksheet.getRow(1);
+            headerRow.eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF004B9B' } }; // Azul
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 11 }; // Blanco
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            });
 
-        // 4. APLICAR FILTROS Y CONGELAR
-        worksheet.autoFilter = {
-            from: 'A1',
-            to: { row: 1, column: worksheet.columns.length }
+            // 4. AUTO-AJUSTE DINÁMICO DE COLUMNAS
+            // Recorremos cada columna para encontrar el texto más largo
+            worksheet.columns.forEach(column => {
+                let maxLength = 0;
+                column.eachCell({ includeEmpty: true }, function(cell) {
+                    const columnLength = cell.value ? cell.value.toString().length : 10;
+                    if (columnLength > maxLength) maxLength = columnLength;
+                });
+                column.width = maxLength < 10 ? 10 : maxLength + 2; // Mínimo 10, más un "aire" de 2
+            });
+
+            // 5. FILTROS Y CONGELAR PANELES (1 Columna y 1 Fila)
+            worksheet.autoFilter = { from: 'A1', to: { row: 1, column: worksheet.columns.length } };
+            worksheet.views = [
+                { state: 'frozen', xSplit: 1, ySplit: 1 } // Congela Columna A (Nombre) y Fila 1 (Títulos)
+            ];
         };
-        
-        worksheet.views = [
-            { state: 'frozen', xSplit: 2, ySplit: 1 } // Congela 2 columnas y 1 fila
-        ];
 
-        // 5. GENERAR EL ARCHIVO Y DESCARGAR
+        // --- PASO 1: CREAR HOJA GENERAL (CON TODO) ---
+        agregarHoja("GENERAL - TODO", currentFiltered);
+
+        // --- PASO 2: CREAR HOJAS POR SALA ---
+        // Obtenemos lista única de salas
+        const salasUnicas = [...new Set(currentFiltered.map(item => item.sala_nom || "Sin Asignar"))];
+
+        // Recorremos cada sala y creamos su hoja
+        salasUnicas.forEach(sala => {
+            const datosSala = currentFiltered.filter(item => (item.sala_nom || "Sin Asignar") === sala);
+            if (datosSala.length > 0) {
+                agregarHoja(sala, datosSala);
+            }
+        });
+
+        // --- PASO 3: DESCARGAR ---
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = window.URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = url;
-        const fecha = new Date().toISOString().slice(0,10);
-        anchor.download = `Inventario_Pro_${fecha}.xlsx`;
+        
+        // Nombre del archivo
+        const hoy = new Date();
+        const fechaStr = hoy.toLocaleDateString().replace(/\//g, '-');
+        const horaStr = hoy.getHours() + "h" + hoy.getMinutes();
+        
+        anchor.download = `Inventario_MultiHoja_${fechaStr}_${horaStr}.xlsx`;
         anchor.click();
         window.URL.revokeObjectURL(url);
     }
