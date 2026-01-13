@@ -7,6 +7,7 @@
     <link rel="manifest" href="/manifest.json">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
     <meta name="theme-color" content="#1a1a27">
     <style>
         body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow: hidden; margin: 0; }
@@ -580,58 +581,86 @@
     function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor','f-tipo','f-modo','f-legal'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
     function controladorAccionNuevo() { if(vista === 'maquina') abrirEditorMaquina(); else abrirModalParametro(); }
-    function exportarExcel() {
-        // 1. Preparamos los datos con los nuevos campos y el orden deseado
-        const dataToExport = currentFiltered.map(m => ({
-            "NOMBRE": m.nombre,
-            "SERIAL": m.serial,
-            "PUESTOS": m.puestos,
-            "GRUPO": m.grupo_nom,
-            "SALA": m.sala_nom,
-            "MARCA": m.marca_nom,
-            "MODELO": m.modelo_nom,
-            "JUEGO": m.juego_nom,
-            "ESTADO": m.estado_nom,
-            "SOCIEDAD": m.sociedad_nom,
-            "VALOR": m.valor_nom,
-            "TIPO": m.tipo_nom,
-            "MODO": m.modo_nom,
-            "LEGAL": m.legal_nom
-        }));
+    async function exportarExcel() {
+        if (currentFiltered.length === 0) return alert("No hay datos para exportar");
 
-        // 2. Creamos la hoja de trabajo (Worksheet)
-        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Inventario');
 
-        // 3. AUTO-AJUSTE DE COLUMNAS (Para que no se amontonen)
-        // Calculamos el ancho máximo basándonos en el contenido de cada celda
-        const objectMaxLength = [];
-        const keys = Object.keys(dataToExport[0] || {});
-        
-        keys.forEach((key) => {
-            let maxLen = key.length; // Empezamos con el largo del título
-            dataToExport.forEach((row) => {
-                const cellValue = row[key] ? row[key].toString() : "";
-                if (cellValue.length > maxLen) maxLen = cellValue.length;
+        // 1. Definir columnas y encabezados
+        worksheet.columns = [
+            { header: 'NOMBRE', key: 'nombre', width: 30 },
+            { header: 'SERIAL', key: 'serial', width: 20 },
+            { header: 'PUESTOS', key: 'puestos', width: 8 },
+            { header: 'GRUPO', key: 'grupo', width: 20 },
+            { header: 'SALA', key: 'sala', width: 25 },
+            { header: 'MARCA', key: 'marca', width: 15 },
+            { header: 'MODELO', key: 'modelo', width: 20 },
+            { header: 'JUEGO', key: 'juego', width: 25 },
+            { header: 'ESTADO', key: 'estado', width: 15 },
+            { header: 'LEGAL', key: 'legal', width: 20 },
+            { header: 'MODO', key: 'modo', width: 15 },
+            { header: 'VALOR', key: 'valor', width: 15 }
+        ];
+
+        // 2. Agregar los datos
+        currentFiltered.forEach(m => {
+            worksheet.addRow({
+                nombre: (m.nombre || "").toUpperCase(),
+                serial: (m.serial || "N/A").toUpperCase(),
+                puestos: m.puestos || 1,
+                grupo: (m.grupo_nom || "").toUpperCase(),
+                sala: (m.sala_nom || "").toUpperCase(),
+                marca: (m.marca_nom || "").toUpperCase(),
+                modelo: (m.modelo_nom || "").toUpperCase(),
+                juego: (m.juego_nom || "").toUpperCase(),
+                estado: (m.estado_nom || "").toUpperCase(),
+                legal: (m.legal_nom || "").toUpperCase(),
+                modo: (m.modo_nom || "").toUpperCase(),
+                valor: (m.valor_nom || "").toUpperCase()
             });
-            objectMaxLength.push({ wch: maxLen + 2 }); // Agregamos un pequeño margen
         });
-        ws['!cols'] = objectMaxLength;
 
-        // 4. FILTROS Y BLOQUEO DE ENCABEZADO
-        // Definimos el rango de la tabla (desde A1 hasta la última columna/fila)
-        const range = XLSX.utils.decode_range(ws['!ref']);
-        ws['!autofilter'] = { ref: XLSX.utils.encode_range(range) }; // Activa los filtros de Excel
+        // 3. DAR ESTILO AL ENCABEZADO (Fila 1)
+        const headerRow = worksheet.getRow(1);
         
-        // Inmovilizar la primera fila (encabezado)
-        ws['!views'] = [{ state: 'frozen', ySplit: 1 }];
+        headerRow.eachCell((cell) => {
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF004B9B' } // Azul corporativo
+            };
+            cell.font = {
+                color: { argb: 'FFFFFFFF' }, // Blanco
+                bold: true,
+                size: 11
+            };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+                top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}
+            };
+        });
 
-        // 5. Crear el libro y exportar
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Inventario_Maquinas");
+        // 4. APLICAR FILTROS Y CONGELAR
+        worksheet.autoFilter = {
+            from: 'A1',
+            to: { row: 1, column: worksheet.columns.length }
+        };
         
-        // Generar nombre de archivo con fecha para mejor control
+        worksheet.views = [
+            { state: 'frozen', xSplit: 2, ySplit: 1 } // Congela 2 columnas y 1 fila
+        ];
+
+        // 5. GENERAR EL ARCHIVO Y DESCARGAR
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
         const fecha = new Date().toISOString().slice(0,10);
-        XLSX.writeFile(wb, `Inventario_Maquinas_${fecha}.xlsx`);
+        anchor.download = `Inventario_Pro_${fecha}.xlsx`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
     }
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
