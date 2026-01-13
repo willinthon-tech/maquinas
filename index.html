@@ -580,8 +580,59 @@
     function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor','f-tipo','f-modo','f-legal'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
     function controladorAccionNuevo() { if(vista === 'maquina') abrirEditorMaquina(); else abrirModalParametro(); }
-    function exportarExcel() { const ws = XLSX.utils.json_to_sheet(currentFiltered.map(m => ({ "Nombre": m.nombre, "Serial": m.serial, "Grupo": m.grupo_nom, "Sala": m.sala_nom, "Marca": m.marca_nom, "Modelo": m.modelo_nom, "Juego": m.juego_nom, "Estado": m.estado_nom, "Sociedad": m.sociedad_nom, "Valor": m.valor_nom, "Tipo": m.tipo_nom, "Modo": m.modo_nom, "Legal": m.legal_nom }))); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventario"); XLSX.writeFile(wb, "Inventario.xlsx"); }
-    
+    function exportarExcel() {
+        // 1. Preparamos los datos con los nuevos campos y el orden deseado
+        const dataToExport = currentFiltered.map(m => ({
+            "NOMBRE": m.nombre,
+            "SERIAL": m.serial,
+            "PUESTOS": m.puestos,
+            "GRUPO": m.grupo_nom,
+            "SALA": m.sala_nom,
+            "MARCA": m.marca_nom,
+            "MODELO": m.modelo_nom,
+            "JUEGO": m.juego_nom,
+            "ESTADO": m.estado_nom,
+            "SOCIEDAD": m.sociedad_nom,
+            "VALOR": m.valor_nom,
+            "TIPO": m.tipo_nom,
+            "MODO": m.modo_nom,
+            "LEGAL": m.legal_nom
+        }));
+
+        // 2. Creamos la hoja de trabajo (Worksheet)
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+        // 3. AUTO-AJUSTE DE COLUMNAS (Para que no se amontonen)
+        // Calculamos el ancho máximo basándonos en el contenido de cada celda
+        const objectMaxLength = [];
+        const keys = Object.keys(dataToExport[0] || {});
+        
+        keys.forEach((key) => {
+            let maxLen = key.length; // Empezamos con el largo del título
+            dataToExport.forEach((row) => {
+                const cellValue = row[key] ? row[key].toString() : "";
+                if (cellValue.length > maxLen) maxLen = cellValue.length;
+            });
+            objectMaxLength.push({ wch: maxLen + 2 }); // Agregamos un pequeño margen
+        });
+        ws['!cols'] = objectMaxLength;
+
+        // 4. FILTROS Y BLOQUEO DE ENCABEZADO
+        // Definimos el rango de la tabla (desde A1 hasta la última columna/fila)
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        ws['!autofilter'] = { ref: XLSX.utils.encode_range(range) }; // Activa los filtros de Excel
+        
+        // Inmovilizar la primera fila (encabezado)
+        ws['!views'] = [{ state: 'frozen', ySplit: 1 }];
+
+        // 5. Crear el libro y exportar
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventario_Maquinas");
+        
+        // Generar nombre de archivo con fecha para mejor control
+        const fecha = new Date().toISOString().slice(0,10);
+        XLSX.writeFile(wb, `Inventario_Maquinas_${fecha}.xlsx`);
+    }
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
     if ('serviceWorker' in navigator) {
