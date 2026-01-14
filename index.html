@@ -564,7 +564,10 @@
     }
 
     function cambiarVista(v) {
+        
         vista = v; 
+        // 1. GUARDAR EN MEMORIA (Esta es la línea mágica)
+        localStorage.setItem('ultimaVista', vista);
         document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active-link'));
         const link = document.getElementById(`link-${v}`); if(link) link.classList.add('active-link');
         document.getElementById('viewTitle').innerText = (v === 'maquina') ? 'Inventario de Máquinas' : v;
@@ -712,7 +715,14 @@
         if (res.status === 409) { const data = await res.json(); document.getElementById('msgErrorRelacion').innerText = data.message; setTimeout(() => modalError.show(), 300); } else if (res.ok) { cargarTabla(); }
     };
 
-    function cerrarSesion() { localStorage.removeItem('usuarioInventario'); usuarioActual = null; document.getElementById('view-app').style.display = 'none'; document.getElementById('view-login').style.display = 'flex'; }
+    function cerrarSesion() { 
+        // BORRAR LA VISTA GUARDADA
+        localStorage.removeItem('ultimaVista');
+        localStorage.removeItem('usuarioInventario'); 
+        usuarioActual = null; 
+        document.getElementById('view-app').style.display = 'none'; 
+        document.getElementById('view-login').style.display = 'flex'; 
+    }
     function cancelarFormulario() { document.getElementById('section-formulario').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor','f-tipo','f-modo','f-legal'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
@@ -849,124 +859,124 @@
     }
 
     function exportarPDF() {
-    if (currentFiltered.length === 0) return alert("No hay datos para exportar");
+        if (currentFiltered.length === 0) return alert("No hay datos para exportar");
 
-    const { jsPDF } = window.jspdf;
-    
-    // 1. Crear documento en HORIZONTAL
-    const doc = new jsPDF('landscape', 'mm', 'a4');
-
-    // 2. Encabezado del Reporte
-    const hoy = new Date();
-    const fechaStr = hoy.toLocaleDateString();
-    const horaStr = hoy.getHours() + ":" + hoy.getMinutes();
-    
-    // Título Principal
-    doc.setFontSize(16);
-    doc.setTextColor(31, 78, 120); // Azul corporativo
-    doc.setFont("helvetica", "bold");
-    doc.text("Reporte de Inventario de Máquinas", 10, 15); // Margen izquierdo reducido
-    
-    // Subtítulo con fecha
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Generado el: ${fechaStr} a las ${horaStr} | Registros: ${currentFiltered.length}`, 10, 20);
-
-    // 3. Definir Columnas y Mapear Data
-    const columns = [
-        { header: 'NOMBRE', dataKey: 'nombre' },
-        { header: 'SERIAL', dataKey: 'serial' },
-        { header: 'MARCA', dataKey: 'marca' },
-        { header: 'MODELO', dataKey: 'modelo' },
-        { header: 'JUEGO', dataKey: 'juego' },
-        { header: 'TIPO', dataKey: 'tipo' },
-        { header: 'PUESTOS', dataKey: 'puestos' },
-        { header: 'MODO', dataKey: 'modo' },
-        { header: 'SOCIEDAD', dataKey: 'sociedad' }, 
-        { header: 'VALOR', dataKey: 'valor' },
-        { header: 'ESTADO', dataKey: 'estado' },
-        { header: 'LEGAL', dataKey: 'legal' },
-        { header: 'GRUPO', dataKey: 'grupo' },
-        { header: 'SALA', dataKey: 'sala' }
-    ];
-
-    const rows = currentFiltered.map(m => ({
-        nombre: (m.nombre || "").toUpperCase(),
-        serial: (m.serial || "N/A").toUpperCase(),
-        marca: (m.marca_nom || "").toUpperCase(),
-        modelo: (m.modelo_nom || "").toUpperCase(),
-        juego: (m.juego_nom || "").toUpperCase(),
-        tipo: (m.tipo_nom || "").toUpperCase(),
-        puestos: m.puestos || 1,
-        modo: (m.modo_nom || "").toUpperCase(),
-        sociedad: (m.sociedad_nom || "").toUpperCase(),
-        valor: (m.valor_nom || "").toUpperCase(),
-        estado: (m.estado_nom || "").toUpperCase(),
-        legal: (m.legal_nom || "NO").toUpperCase(),
-        grupo: (m.grupo_nom || "").toUpperCase(),
-        sala: (m.sala_nom || "").toUpperCase()
-    }));
-
-    // 4. GENERAR TABLA AUTO-AJUSTABLE
-    doc.autoTable({
-        columns: columns,
-        body: rows,
-        startY: 25,
+        const { jsPDF } = window.jspdf;
         
-        // --- MÁRGENES ESTRECHOS (Para aprovechar la hoja) ---
-        margin: { top: 25, left: 5, right: 5, bottom: 10 },
+        // 1. Crear documento en HORIZONTAL
+        const doc = new jsPDF('landscape', 'mm', 'a4');
 
-        // --- ESTILOS GENERALES (Compactos) ---
-        theme: 'grid',
-        styles: {
-            fontSize: 6.5,       // <--- Letra pequeña para que quepa todo
-            cellPadding: 1.5,    // <--- Menos relleno para ahorrar espacio
-            valign: 'middle',
-            overflow: 'linebreak', // <--- Importante: Texto largo salta de línea
-            lineWidth: 0.1,      // Líneas finas
-            lineColor: [200, 200, 200]
-        },
+        // 2. Encabezado del Reporte
+        const hoy = new Date();
+        const fechaStr = hoy.toLocaleDateString();
+        const horaStr = hoy.getHours() + ":" + hoy.getMinutes();
+        
+        // Título Principal
+        doc.setFontSize(16);
+        doc.setTextColor(31, 78, 120); // Azul corporativo
+        doc.setFont("helvetica", "bold");
+        doc.text("Reporte de Inventario de Máquinas", 10, 15); // Margen izquierdo reducido
+        
+        // Subtítulo con fecha
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Generado el: ${fechaStr} a las ${horaStr} | Registros: ${currentFiltered.length}`, 10, 20);
 
-        // --- ESTILO ENCABEZADO ---
-        headStyles: { 
-            fillColor: [31, 78, 120], 
-            textColor: 255, 
-            fontSize: 7,         // Título un pelín más grande que el texto
-            fontStyle: 'bold',
-            halign: 'center',
-            valign: 'middle'
-        },
+        // 3. Definir Columnas y Mapear Data
+        const columns = [
+            { header: 'NOMBRE', dataKey: 'nombre' },
+            { header: 'SERIAL', dataKey: 'serial' },
+            { header: 'MARCA', dataKey: 'marca' },
+            { header: 'MODELO', dataKey: 'modelo' },
+            { header: 'JUEGO', dataKey: 'juego' },
+            { header: 'TIPO', dataKey: 'tipo' },
+            { header: 'PUESTOS', dataKey: 'puestos' },
+            { header: 'MODO', dataKey: 'modo' },
+            { header: 'SOCIEDAD', dataKey: 'sociedad' }, 
+            { header: 'VALOR', dataKey: 'valor' },
+            { header: 'ESTADO', dataKey: 'estado' },
+            { header: 'LEGAL', dataKey: 'legal' },
+            { header: 'GRUPO', dataKey: 'grupo' },
+            { header: 'SALA', dataKey: 'sala' }
+        ];
 
-        // --- ESTILO FILAS (Cebra) ---
-        alternateRowStyles: { 
-            fillColor: [240, 245, 235] // Un verde/gris muy pálido para leer mejor
-        },
+        const rows = currentFiltered.map(m => ({
+            nombre: (m.nombre || "").toUpperCase(),
+            serial: (m.serial || "N/A").toUpperCase(),
+            marca: (m.marca_nom || "").toUpperCase(),
+            modelo: (m.modelo_nom || "").toUpperCase(),
+            juego: (m.juego_nom || "").toUpperCase(),
+            tipo: (m.tipo_nom || "").toUpperCase(),
+            puestos: m.puestos || 1,
+            modo: (m.modo_nom || "").toUpperCase(),
+            sociedad: (m.sociedad_nom || "").toUpperCase(),
+            valor: (m.valor_nom || "").toUpperCase(),
+            estado: (m.estado_nom || "").toUpperCase(),
+            legal: (m.legal_nom || "NO").toUpperCase(),
+            grupo: (m.grupo_nom || "").toUpperCase(),
+            sala: (m.sala_nom || "").toUpperCase()
+        }));
 
-        // --- ANCHOS DE COLUMNA PERSONALIZADOS ---
-        // Aquí distribuimos los 287mm disponibles (297mm hoja - 10mm márgenes)
-        columnStyles: {
-            nombre:    { cellWidth: 'auto', fontStyle: 'bold' }, // El más importante
-            serial:    { cellWidth: 'auto' },
-            marca:     { cellWidth: 'auto' },
-            modelo:    { cellWidth: 'auto' },
-            juego:     { cellWidth: 'auto' }, // Juegos suelen tener nombres largos
-            tipo:      { cellWidth: 'auto' },
-            puestos:   { cellWidth: 'auto' }, // Muy pequeño
-            modo:      { cellWidth: 'auto' },
-            sociedad:  { cellWidth: 'auto' },
-            valor:     { cellWidth: 'auto' },
-            estado:    { cellWidth: 'auto' },
-            legal:     { cellWidth: 'auto' },
-            grupo:     { cellWidth: 'auto' },
-            sala:      { cellWidth: 'auto' } // El resto del espacio para la sala
-        }
-    });
+        // 4. GENERAR TABLA AUTO-AJUSTABLE
+        doc.autoTable({
+            columns: columns,
+            body: rows,
+            startY: 25,
+            
+            // --- MÁRGENES ESTRECHOS (Para aprovechar la hoja) ---
+            margin: { top: 25, left: 5, right: 5, bottom: 10 },
 
-    // 5. Guardar
-    const nombreArchivo = `Inventario_Maquinas_${fechaStr.replace(/\//g, '-')}.pdf`;
-    doc.save(nombreArchivo);
-}
+            // --- ESTILOS GENERALES (Compactos) ---
+            theme: 'grid',
+            styles: {
+                fontSize: 6.5,       // <--- Letra pequeña para que quepa todo
+                cellPadding: 1.5,    // <--- Menos relleno para ahorrar espacio
+                valign: 'middle',
+                overflow: 'linebreak', // <--- Importante: Texto largo salta de línea
+                lineWidth: 0.1,      // Líneas finas
+                lineColor: [200, 200, 200]
+            },
+
+            // --- ESTILO ENCABEZADO ---
+            headStyles: { 
+                fillColor: [31, 78, 120], 
+                textColor: 255, 
+                fontSize: 7,         // Título un pelín más grande que el texto
+                fontStyle: 'bold',
+                halign: 'center',
+                valign: 'middle'
+            },
+
+            // --- ESTILO FILAS (Cebra) ---
+            alternateRowStyles: { 
+                fillColor: [240, 245, 235] // Un verde/gris muy pálido para leer mejor
+            },
+
+            // --- ANCHOS DE COLUMNA PERSONALIZADOS ---
+            // Aquí distribuimos los 287mm disponibles (297mm hoja - 10mm márgenes)
+            columnStyles: {
+                nombre:    { cellWidth: 'auto', fontStyle: 'bold' }, // El más importante
+                serial:    { cellWidth: 'auto' },
+                marca:     { cellWidth: 'auto' },
+                modelo:    { cellWidth: 'auto' },
+                juego:     { cellWidth: 'auto' }, // Juegos suelen tener nombres largos
+                tipo:      { cellWidth: 'auto' },
+                puestos:   { cellWidth: 'auto' }, // Muy pequeño
+                modo:      { cellWidth: 'auto' },
+                sociedad:  { cellWidth: 'auto' },
+                valor:     { cellWidth: 'auto' },
+                estado:    { cellWidth: 'auto' },
+                legal:     { cellWidth: 'auto' },
+                grupo:     { cellWidth: 'auto' },
+                sala:      { cellWidth: 'auto' } // El resto del espacio para la sala
+            }
+        });
+
+        // 5. Guardar
+        const nombreArchivo = `Inventario_Maquinas_${fechaStr.replace(/\//g, '-')}.pdf`;
+        doc.save(nombreArchivo);
+    }
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
     if ('serviceWorker' in navigator) {
@@ -974,7 +984,17 @@
         navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail', err));
       });
     }
-
+    // Al iniciar la aplicación (al recargar)
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Recuperamos la vista guardada o usamos 'maquinas' por defecto
+        const vistaGuardada = localStorage.getItem('ultimaVista') || 'maquinas';
+        
+        // 2. Aplicamos esa vista
+        cambiarVista(vistaGuardada);
+        
+        // Opcional: Si necesitas cargar datos iniciales generales
+        // cargarDatosGenerales(); 
+    });
     verificarSesion();
 </script>
 </body>
