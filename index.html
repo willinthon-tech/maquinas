@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <meta name="theme-color" content="#1a1a27">
     <style>
         body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow: hidden; margin: 0; }
@@ -101,7 +103,11 @@
                     <div class="row g-2">
                         <div class="col-md-4 mt-3"><button class="btn btn-secondary btn-action w-100" onclick="resetFiltros()">Limpiar</button></div>
                         <div class="col-md-4 mt-3"><button class="btn btn-warning btn-action w-100 fw-bold" onclick="exportarExcel()">Excel</button></div>
-                        <div class="col-md-4 mt-3"><button class="btn btn-primary btn-action w-100 fw-bold" onclick="window.print()">Imprimir</button></div>
+                        <div class="col-md-4 mt-3">
+                            <button class="btn btn-danger btn-action w-100 fw-bold" onclick="exportarPDF()">
+                                <i class="bi bi-file-pdf"></i> PDF
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -711,6 +717,112 @@
         anchor.click();
         window.URL.revokeObjectURL(url);
     }
+
+    function exportarPDF() {
+        if (currentFiltered.length === 0) return alert("No hay datos para exportar");
+
+        const { jsPDF } = window.jspdf;
+        
+        // 1. Crear documento en HORIZONTAL (Landscape) para que quepan las columnas
+        const doc = new jsPDF('landscape', 'mm', 'a4');
+
+        // 2. Título del Reporte
+        const hoy = new Date();
+        const fechaStr = hoy.toLocaleDateString();
+        const horaStr = hoy.getHours() + ":" + hoy.getMinutes();
+        
+        doc.setFontSize(18);
+        doc.setTextColor(40);
+        doc.text("Reporte de Inventario de Máquinas", 14, 15);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generado el: ${fechaStr} a las ${horaStr}`, 14, 22);
+
+        // 3. Definir Columnas y Filas (Igual que en Excel)
+        const columns = [
+            { header: 'NOMBRE', dataKey: 'nombre' },
+            { header: 'SERIAL', dataKey: 'serial' },
+            { header: 'MARCA', dataKey: 'marca' },
+            { header: 'MODELO', dataKey: 'modelo' },
+            { header: 'JUEGO', dataKey: 'juego' },
+            { header: 'TIPO', dataKey: 'tipo' },
+            { header: 'PUESTOS', dataKey: 'puestos' },
+            { header: 'MODO', dataKey: 'modo' },
+            { header: 'SOC', dataKey: 'sociedad' }, // Abreviado para espacio
+            { header: 'VALOR', dataKey: 'valor' },
+            { header: 'ESTADO', dataKey: 'estado' },
+            { header: 'LEGAL', dataKey: 'legal' },
+            { header: 'GRUPO', dataKey: 'grupo' },
+            { header: 'SALA', dataKey: 'sala' }
+        ];
+
+        // Preparamos la data
+        const rows = currentFiltered.map(m => ({
+            nombre: (m.nombre || "").toUpperCase(),
+            serial: (m.serial || "N/A").toUpperCase(),
+            marca: (m.marca_nom || "").toUpperCase(),
+            modelo: (m.modelo_nom || "").toUpperCase(),
+            juego: (m.juego_nom || "").toUpperCase(),
+            tipo: (m.tipo_nom || "").toUpperCase(),
+            puestos: m.puestos || 1,
+            modo: (m.modo_nom || "").toUpperCase(),
+            sociedad: (m.sociedad_nom || "").toUpperCase(),
+            valor: (m.valor_nom || "").toUpperCase(),
+            estado: (m.estado_nom || "").toUpperCase(),
+            legal: (m.legal_nom || "NO").toUpperCase(),
+            grupo: (m.grupo_nom || "").toUpperCase(),
+            sala: (m.sala_nom || "").toUpperCase()
+        }));
+
+        // 4. GENERAR TABLA BONITA (jsPDF-AutoTable)
+        doc.autoTable({
+            columns: columns,
+            body: rows,
+            startY: 28, // Empezar debajo del título
+            
+            // --- ESTILOS VISUALES (Igualando al Excel) ---
+            theme: 'grid', // Bordes finos
+            
+            // Estilo del Encabezado (Azul Oscuro y Letra Blanca)
+            headStyles: { 
+                fillColor: [31, 78, 120], // RGB de #1F4E78
+                textColor: 255, 
+                fontSize: 9, 
+                fontStyle: 'bold',
+                halign: 'center',
+                valign: 'middle'
+            },
+            
+            // Estilo de las Filas (Cebra: Blanco y Gris/Verdoso suave)
+            bodyStyles: { 
+                fontSize: 8, // Letra un poco más pequeña para que quepa todo
+                valign: 'middle' 
+            },
+            alternateRowStyles: { 
+                fillColor: [235, 241, 222] // RGB de #FFEBF1DE
+            },
+            
+            // Ajuste de columnas
+            styles: {
+                overflow: 'linebreak', // Si el texto es largo, salta de línea
+                cellPadding: 2
+            },
+            
+            // Anchos de columna específicos (Opcional, para dar prioridad)
+            columnStyles: {
+                nombre: { cellWidth: 35 },
+                serial: { cellWidth: 20 },
+                puestos: { cellWidth: 10, halign: 'center' },
+                sala: { cellWidth: 25 }
+            }
+        });
+
+        // 5. Guardar archivo
+        const nombreArchivo = `Inventario_Maquinas_${fechaStr.replace(/\//g, '-')}.pdf`;
+        doc.save(nombreArchivo);
+    }
+
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
     if ('serviceWorker' in navigator) {
