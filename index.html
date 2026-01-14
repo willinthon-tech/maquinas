@@ -37,8 +37,9 @@
         .feedback-error { color: #dc3545; font-size: 0.7rem; margin-top: 2px; font-weight: bold; display: none; }
 
         /* Transición suave para expandir/colapsar */
+        /* Altura ajustada para mostrar aprox. 3 filas */
         .table-container-limit {
-            max-height: 160px; /* Altura inicial fija */
+            max-height: 110px; /* Ajustado para ver solo 3 registros */
             overflow: hidden;
             transition: max-height 0.5s ease-in-out;
         }
@@ -48,7 +49,6 @@
             overflow-y: auto;
         }
 
-        /* Estilo del badge del contador */
         .badge-counter {
             background-color: #eef2f5; 
             color: #1F4E78; 
@@ -171,11 +171,13 @@
     let vista = "maquina", allData = [], editId = null, currentFiltered = [], usuarioActual = null, refreshInt = null;
     let targetDelete = { id: null, tabla: null };
     let tempUserId = null; 
+    let expandedCards = new Set(); // Guardará los IDs de las tarjetas abiertas
 
     const modalParam = new bootstrap.Modal(document.getElementById('modalParam'));
     const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
     const modalError = new bootstrap.Modal(document.getElementById('modalErrorRelacion'));
     const modalSucursales = new bootstrap.Modal(document.getElementById('modalSucursales'));
+    
 
     function aplicarPermisosUI() {
         if(!usuarioActual) return;
@@ -473,7 +475,7 @@
         ];
 
         cats.forEach((c, index) => {
-            // 1. Contar elementos
+            // 1. Datos
             const count = {}; 
             currentFiltered.forEach(m => { 
                 let l = (c.key === 'modelo_nom') ? `${m.modelo_nom || 'N/A'} (${m.marca_nom || 'N/A'})` : 
@@ -483,13 +485,20 @@
             });
             
             const sorted = Object.entries(count).sort((a,b) => b[1] - a[1]);
-            const totalItems = sorted.length; // Total de categorías únicas (ej: 5 marcas)
-            const uniqueId = `card_detail_${index}`; // ID único para cada tarjeta
+            const totalItems = sorted.length;
+            const uniqueId = `card_detail_${index}`; 
 
-            // 2. Definir si necesita botón "Ver más" (si tiene más de 5 items)
-            const showExpandBtn = totalItems > 5;
+            // 2. VERIFICAMOS SI ESTABA ABIERTA (MEMORIA)
+            const isExpanded = expandedCards.has(uniqueId);
+            
+            // Aplicamos la clase y el texto del botón según el estado guardado
+            const currentClass = isExpanded ? 'table-container-full' : 'table-container-limit';
+            const btnIcon = isExpanded ? 'bi-chevron-up' : 'bi-chevron-down';
+            const btnText = isExpanded ? 'Ver menos' : `Ver todos (${totalItems})`;
 
-            // 3. Construir HTML
+            // Solo mostramos botón si hay más de 3 registros
+            const showExpandBtn = totalItems > 3;
+
             let html = `
             <div class="col-md-3">
                 <div class="card detail-card shadow-sm h-100">
@@ -501,7 +510,7 @@
                     </div>
 
                     <div class="card-body p-0">
-                        <div id="cont_${uniqueId}" class="table-container-limit">
+                        <div id="cont_${uniqueId}" class="${currentClass}">
                             <table class="table detail-table table-sm table-hover mb-0">
                                 <tbody>
                                     ${sorted.map(([n, ct]) => `
@@ -517,7 +526,7 @@
                     ${showExpandBtn ? `
                     <div class="card-footer p-0 bg-white border-top-0 text-center">
                         <button onclick="toggleExpand('${uniqueId}')" id="btn_${uniqueId}" class="btn btn-link btn-sm text-decoration-none shadow-none" style="font-size:0.7rem; width:100%;">
-                            <i class="bi bi-chevron-down"></i> Ver todos (${totalItems})
+                            <i class="bi ${btnIcon}"></i> ${btnText}
                         </button>
                     </div>` : ''}
                 </div>
@@ -530,19 +539,27 @@
     function toggleExpand(id) {
         const container = document.getElementById(`cont_${id}`);
         const btn = document.getElementById(`btn_${id}`);
-    
-        // Verificamos si tiene la clase "limit"
+        
         if (container.classList.contains('table-container-limit')) {
-            // EXPANDIR
+            // ABRIR
             container.classList.remove('table-container-limit');
             container.classList.add('table-container-full');
             btn.innerHTML = '<i class="bi bi-chevron-up"></i> Ver menos';
+            
+            // Guardamos en memoria que esta tarjeta está abierta
+            expandedCards.add(id);
         } else {
-            // COLAPSAR
+            // CERRAR
             container.classList.remove('table-container-full');
             container.classList.add('table-container-limit');
-            // Recuperamos el número del texto original si quieres, o simplemente "Ver todos"
-            btn.innerHTML = '<i class="bi bi-chevron-down"></i> Ver todos';
+            // Recuperamos el número total del badge para volver a ponerlo en el botón si quieres, 
+            // o dejamos el texto genérico para simplificar.
+            // Truco: leemos el número del badge del mismo card para ponerlo en el botón
+            const count = btn.closest('.card').querySelector('.badge-counter').innerText;
+            btn.innerHTML = `<i class="bi bi-chevron-down"></i> Ver todos (${count})`;
+            
+            // Borramos de memoria
+            expandedCards.delete(id);
         }
     }
 
