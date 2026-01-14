@@ -582,142 +582,135 @@
     function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor','f-tipo','f-modo','f-legal'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
     function controladorAccionNuevo() { if(vista === 'maquina') abrirEditorMaquina(); else abrirModalParametro(); }
     async function exportarExcel() {
-    if (currentFiltered.length === 0) return alert("No hay datos para exportar");
+        if (currentFiltered.length === 0) return alert("No hay datos para exportar");
 
-    const workbook = new ExcelJS.Workbook();
-    
-    // --- FUNCIÓN HELPER ---
-    const agregarHoja = async (nombreHoja, datos) => {
-        const safeName = (nombreHoja || "Sin Sala").substring(0, 30).replace(/[\/\\\?\*\]\[]/g, '-');
-        const worksheet = workbook.addWorksheet(safeName);
-
-        // 1. Columnas
-        worksheet.columns = [
-            { header: 'NOMBRE DE MÁQUINA', key: 'nombre' },
-            { header: 'SERIAL', key: 'serial' },
-            { header: 'MARCA', key: 'marca' },
-            { header: 'MODELO', key: 'modelo' },
-            { header: 'JUEGO', key: 'juego' },
-            { header: 'TIPO', key: 'tipo' },
-            { header: 'PUESTOS', key: 'puestos' },
-            { header: 'MODO', key: 'modo' },
-            { header: 'SOCIEDAD', key: 'sociedad' },
-            { header: 'VALOR', key: 'valor' },
-            { header: 'ESTADO', key: 'estado' },
-            { header: 'LEGAL', key: 'legal' },
-            { header: 'GRUPO', key: 'grupo' },
-            { header: 'SALA', key: 'sala' }
-        ];
-
-        // 2. Datos
-        datos.forEach(m => {
-            worksheet.addRow({
-                nombre: (m.nombre || "").toUpperCase(),
-                serial: (m.serial || "N/A").toUpperCase(),
-                marca: (m.marca_nom || "").toUpperCase(),
-                modelo: (m.modelo_nom || "").toUpperCase(),
-                juego: (m.juego_nom || "").toUpperCase(),
-                tipo: (m.tipo_nom || "").toUpperCase(),
-                puestos: m.puestos || 1,
-                modo: (m.modo_nom || "").toUpperCase(),
-                sociedad: (m.sociedad_nom || "").toUpperCase(),
-                valor: (m.valor_nom || "").toUpperCase(),
-                estado: (m.estado_nom || "").toUpperCase(),
-                legal: (m.legal_nom || "NO").toUpperCase(),
-                grupo: (m.grupo_nom || "").toUpperCase(),
-                sala: (m.sala_nom || "").toUpperCase()
-            });
-        });
-
-        // 3. ESTILO ENCABEZADO (Bloqueado visualmente)
-        const headerRow = worksheet.getRow(1);
-        headerRow.height = 30; 
+        const workbook = new ExcelJS.Workbook();
         
-        headerRow.eachCell((cell) => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } }; 
-            cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 14, name: 'Calibri' };
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-            
-            // Bloqueamos el título
-            cell.protection = { locked: true }; 
-        });
+        // --- FUNCIÓN HELPER ---
+        const agregarHoja = async (nombreHoja, datos) => {
+            const safeName = (nombreHoja || "Sin Sala").substring(0, 30).replace(/[\/\\\?\*\]\[]/g, '-');
+            const worksheet = workbook.addWorksheet(safeName);
 
-        // 4. ESTILO ZEBRA Y DESBLOQUEO DE DATOS
-        worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber > 1) { 
-                row.eachCell({ includeEmpty: true }, (cell) => {
-                    cell.border = { 
-                        top: {style:'thin', color: {argb:'FFD9D9D9'}}, 
-                        left: {style:'thin', color: {argb:'FFD9D9D9'}}, 
-                        bottom: {style:'thin', color: {argb:'FFD9D9D9'}}, 
-                        right: {style:'thin', color: {argb:'FFD9D9D9'}} 
-                    };
-                    if (rowNumber % 2 === 0) {
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF1DE' } };
-                    }
-                    
-                    // IMPORTANTE: Desbloquear los datos es OBLIGATORIO para que el filtro pueda ordenar (Sort)
-                    cell.protection = { locked: false };
+            // 1. Columnas
+            worksheet.columns = [
+                { header: 'NOMBRE', key: 'nombre' },
+                { header: 'SERIAL', key: 'serial' },
+                { header: 'MARCA', key: 'marca' },
+                { header: 'MODELO', key: 'modelo' },
+                { header: 'JUEGO', key: 'juego' },
+                { header: 'TIPO', key: 'tipo' },
+                { header: 'PUESTOS', key: 'puestos' },
+                { header: 'MODO', key: 'modo' },
+                { header: 'SOCIEDAD', key: 'sociedad' },
+                { header: 'VALOR', key: 'valor' },
+                { header: 'ESTADO', key: 'estado' },
+                { header: 'LEGAL', key: 'legal' },
+                { header: 'GRUPO', key: 'grupo' },
+                { header: 'SALA', key: 'sala' }
+            ];
+
+            // 2. Datos
+            datos.forEach(m => {
+                worksheet.addRow({
+                    nombre: (m.nombre || "").toUpperCase(),
+                    serial: (m.serial || "N/A").toUpperCase(),
+                    marca: (m.marca_nom || "").toUpperCase(),
+                    modelo: (m.modelo_nom || "").toUpperCase(),
+                    juego: (m.juego_nom || "").toUpperCase(),
+                    tipo: (m.tipo_nom || "").toUpperCase(),
+                    puestos: m.puestos || 1,
+                    modo: (m.modo_nom || "").toUpperCase(),
+                    sociedad: (m.sociedad_nom || "").toUpperCase(),
+                    valor: (m.valor_nom || "").toUpperCase(),
+                    estado: (m.estado_nom || "").toUpperCase(),
+                    legal: (m.legal_nom || "NO").toUpperCase(),
+                    grupo: (m.grupo_nom || "").toUpperCase(),
+                    sala: (m.sala_nom || "").toUpperCase()
                 });
-            }
-        });
-
-        // 5. AUTO-AJUSTE
-        worksheet.columns.forEach(column => {
-            let maxLength = 0;
-            column.eachCell({ includeEmpty: true }, function(cell) {
-                let cellLength = cell.value ? cell.value.toString().length : 0;
-                if (cell.row === 1) cellLength += 5; 
-                if (cellLength > maxLength) maxLength = cellLength;
             });
-            column.width = maxLength < 12 ? 12 : maxLength + 2; 
-        });
 
-        // 6. APLICAMOS EL RANGO DE FILTRO (Esto debe ir ANTES de proteger)
-        // Esto pone las flechitas visualmente
-        worksheet.autoFilter = {
-            from: 'A1',
-            to: { row: 1, column: worksheet.columns.length }
+            // 3. ESTILO ENCABEZADO (Solo visual, sin función de filtro)
+            const headerRow = worksheet.getRow(1);
+            headerRow.height = 30; 
+            
+            headerRow.eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } }; 
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 14, name: 'Calibri' };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                
+                // Bloqueamos encabezados
+                cell.protection = { locked: true }; 
+            });
+
+            // 4. ESTILO ZEBRA Y DESBLOQUEO DE DATOS
+            worksheet.eachRow((row, rowNumber) => {
+                if (rowNumber > 1) { 
+                    row.eachCell({ includeEmpty: true }, (cell) => {
+                        cell.border = { 
+                            top: {style:'thin', color: {argb:'FFD9D9D9'}}, 
+                            left: {style:'thin', color: {argb:'FFD9D9D9'}}, 
+                            bottom: {style:'thin', color: {argb:'FFD9D9D9'}}, 
+                            right: {style:'thin', color: {argb:'FFD9D9D9'}} 
+                        };
+                        if (rowNumber % 2 === 0) {
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF1DE' } };
+                        }
+                        // Desbloqueamos datos
+                        cell.protection = { locked: false };
+                    });
+                }
+            });
+
+            // 5. AUTO-AJUSTE
+            worksheet.columns.forEach(column => {
+                let maxLength = 0;
+                column.eachCell({ includeEmpty: true }, function(cell) {
+                    let cellLength = cell.value ? cell.value.toString().length : 0;
+                    if (cell.row === 1) cellLength += 5; 
+                    if (cellLength > maxLength) maxLength = cellLength;
+                });
+                column.width = maxLength < 12 ? 12 : maxLength + 2; 
+            });
+
+            // --- CAMBIO PRINCIPAL: ELIMINAMOS "worksheet.autoFilter" ---
+            // Al borrar esa línea, las flechas desaparecen.
+
+            // 6. PROTECCIÓN (Sin AutoFilter activado)
+            await worksheet.protect('25047058', {
+                selectLockedCells: true,   
+                selectUnlockedCells: true, 
+                formatColumns: true,       
+                formatRows: true,
+                // autoFilter: true,  <-- Como no pusimos el rango arriba, esto ya no hace falta activarlo
+                sort: true                 
+            });
         };
 
-        // 7. PROTECCIÓN CON PERMISOS DE FILTRADO
-        await worksheet.protect('25047058', {
-            selectLockedCells: true,   // Necesario para poder hacer clic en la flecha del filtro
-            selectUnlockedCells: true, // Necesario para editar la data
-            formatColumns: true,       // Opcional: ajustar anchos
-            formatRows: true,
-            autoFilter: true,          // <--- ESTA ES LA CLAVE: Permite USAR los filtros existentes
-            sort: true                 // <--- ESTA ES LA OTRA CLAVE: Permite reordenar la tabla
-        });
-    };
+        // --- GENERACIÓN ---
+        await agregarHoja("Todas las Salas", currentFiltered);
 
-    // --- GENERACIÓN ---
-    await agregarHoja("Todas las Salas", currentFiltered);
-
-    const salasUnicas = [...new Set(currentFiltered.map(item => item.sala_nom || "Sin Asignar"))];
-    for (const sala of salasUnicas) {
-        const datosSala = currentFiltered.filter(item => (item.sala_nom || "Sin Asignar") === sala);
-        if (datosSala.length > 0) {
-            await agregarHoja(sala, datosSala);
+        const salasUnicas = [...new Set(currentFiltered.map(item => item.sala_nom || "Sin Asignar"))];
+        for (const sala of salasUnicas) {
+            const datosSala = currentFiltered.filter(item => (item.sala_nom || "Sin Asignar") === sala);
+            if (datosSala.length > 0) {
+                await agregarHoja(sala, datosSala);
+            }
         }
-    }
 
-    // --- DESCARGA ---
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    
-    const hoy = new Date();
-    const fechaStr = hoy.toLocaleDateString().replace(/\//g, '-');
-    const horaStr = hoy.getHours() + "h" + hoy.getMinutes();
-    
-    anchor.download = `Inventario_Maquinas_${fechaStr}_${horaStr}.xlsx`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
-}
+        // --- DESCARGA ---
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        const hoy = new Date();
+        const fechaStr = hoy.toLocaleDateString().replace(/\//g, '-');
+        const horaStr = hoy.getHours() + "h" + hoy.getMinutes();
+        anchor.download = `Inventario_Clean_${fechaStr}_${horaStr}.xlsx`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+    }
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
     if ('serviceWorker' in navigator) {
