@@ -853,7 +853,7 @@
         const hoy = new Date();
         const fechaStr = hoy.toLocaleDateString().replace(/\//g, '-');
         const horaStr = hoy.getHours() + "h" + hoy.getMinutes();
-        anchor.download = `Inventario_Clean_${fechaStr}_${horaStr}.xlsx`;
+        anchor.download = `Inventario_Maquinas_${fechaStr}_${horaStr}.xlsx`;
         anchor.click();
         window.URL.revokeObjectURL(url);
     }
