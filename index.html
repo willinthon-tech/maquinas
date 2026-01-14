@@ -751,7 +751,7 @@
         { header: 'MODELO', dataKey: 'modelo' },
         { header: 'JUEGO', dataKey: 'juego' },
         { header: 'TIPO', dataKey: 'tipo' },
-        { header: 'PST', dataKey: 'puestos' },
+        { header: 'PUESTOS', dataKey: 'puestos' },
         { header: 'MODO', dataKey: 'modo' },
         { header: 'SOCIEDAD', dataKey: 'sociedad' }, 
         { header: 'VALOR', dataKey: 'valor' },
@@ -816,19 +816,19 @@
         // --- ANCHOS DE COLUMNA PERSONALIZADOS ---
         // Aquí distribuimos los 287mm disponibles (297mm hoja - 10mm márgenes)
         columnStyles: {
-            nombre:    { cellWidth: 32, fontStyle: 'bold' }, // El más importante
-            serial:    { cellWidth: 20 },
-            marca:     { cellWidth: 18 },
-            modelo:    { cellWidth: 20 },
-            juego:     { cellWidth: 25 }, // Juegos suelen tener nombres largos
-            tipo:      { cellWidth: 15 },
-            puestos:   { cellWidth: 8, halign: 'center' }, // Muy pequeño
-            modo:      { cellWidth: 15 },
-            sociedad:  { cellWidth: 18 },
-            valor:     { cellWidth: 12 },
-            estado:    { cellWidth: 15 },
-            legal:     { cellWidth: 15 },
-            grupo:     { cellWidth: 20 },
+            nombre:    { cellWidth: 'auto', fontStyle: 'bold' }, // El más importante
+            serial:    { cellWidth: 'auto' },
+            marca:     { cellWidth: 'auto' },
+            modelo:    { cellWidth: 'auto' },
+            juego:     { cellWidth: 'auto' }, // Juegos suelen tener nombres largos
+            tipo:      { cellWidth: 'auto' },
+            puestos:   { cellWidth: 'auto' }, // Muy pequeño
+            modo:      { cellWidth: 'auto' },
+            sociedad:  { cellWidth: 'auto' },
+            valor:     { cellWidth: 'auto' },
+            estado:    { cellWidth: 'auto' },
+            legal:     { cellWidth: 'auto' },
+            grupo:     { cellWidth: 'auto' },
             sala:      { cellWidth: 'auto' } // El resto del espacio para la sala
         }
     });
