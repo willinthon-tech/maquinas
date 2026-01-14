@@ -719,110 +719,124 @@
     }
 
     function exportarPDF() {
-        if (currentFiltered.length === 0) return alert("No hay datos para exportar");
+    if (currentFiltered.length === 0) return alert("No hay datos para exportar");
 
-        const { jsPDF } = window.jspdf;
+    const { jsPDF } = window.jspdf;
+    
+    // 1. Crear documento en HORIZONTAL
+    const doc = new jsPDF('landscape', 'mm', 'a4');
+
+    // 2. Encabezado del Reporte
+    const hoy = new Date();
+    const fechaStr = hoy.toLocaleDateString();
+    const horaStr = hoy.getHours() + ":" + hoy.getMinutes();
+    
+    // Título Principal
+    doc.setFontSize(16);
+    doc.setTextColor(31, 78, 120); // Azul corporativo
+    doc.setFont("helvetica", "bold");
+    doc.text("Reporte de Inventario de Máquinas", 10, 15); // Margen izquierdo reducido
+    
+    // Subtítulo con fecha
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generado el: ${fechaStr} a las ${horaStr} | Registros: ${currentFiltered.length}`, 10, 20);
+
+    // 3. Definir Columnas y Mapear Data
+    const columns = [
+        { header: 'NOMBRE', dataKey: 'nombre' },
+        { header: 'SERIAL', dataKey: 'serial' },
+        { header: 'MARCA', dataKey: 'marca' },
+        { header: 'MODELO', dataKey: 'modelo' },
+        { header: 'JUEGO', dataKey: 'juego' },
+        { header: 'TIPO', dataKey: 'tipo' },
+        { header: 'PST', dataKey: 'puestos' },
+        { header: 'MODO', dataKey: 'modo' },
+        { header: 'SOCIEDAD', dataKey: 'sociedad' }, 
+        { header: 'VALOR', dataKey: 'valor' },
+        { header: 'ESTADO', dataKey: 'estado' },
+        { header: 'LEGAL', dataKey: 'legal' },
+        { header: 'GRUPO', dataKey: 'grupo' },
+        { header: 'SALA', dataKey: 'sala' }
+    ];
+
+    const rows = currentFiltered.map(m => ({
+        nombre: (m.nombre || "").toUpperCase(),
+        serial: (m.serial || "N/A").toUpperCase(),
+        marca: (m.marca_nom || "").toUpperCase(),
+        modelo: (m.modelo_nom || "").toUpperCase(),
+        juego: (m.juego_nom || "").toUpperCase(),
+        tipo: (m.tipo_nom || "").toUpperCase(),
+        puestos: m.puestos || 1,
+        modo: (m.modo_nom || "").toUpperCase(),
+        sociedad: (m.sociedad_nom || "").toUpperCase(),
+        valor: (m.valor_nom || "").toUpperCase(),
+        estado: (m.estado_nom || "").toUpperCase(),
+        legal: (m.legal_nom || "NO").toUpperCase(),
+        grupo: (m.grupo_nom || "").toUpperCase(),
+        sala: (m.sala_nom || "").toUpperCase()
+    }));
+
+    // 4. GENERAR TABLA AUTO-AJUSTABLE
+    doc.autoTable({
+        columns: columns,
+        body: rows,
+        startY: 25,
         
-        // 1. Crear documento en HORIZONTAL (Landscape) para que quepan las columnas
-        const doc = new jsPDF('landscape', 'mm', 'a4');
+        // --- MÁRGENES ESTRECHOS (Para aprovechar la hoja) ---
+        margin: { top: 25, left: 5, right: 5, bottom: 10 },
 
-        // 2. Título del Reporte
-        const hoy = new Date();
-        const fechaStr = hoy.toLocaleDateString();
-        const horaStr = hoy.getHours() + ":" + hoy.getMinutes();
-        
-        doc.setFontSize(18);
-        doc.setTextColor(40);
-        doc.text("Reporte de Inventario de Máquinas", 14, 15);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Generado el: ${fechaStr} a las ${horaStr}`, 14, 22);
+        // --- ESTILOS GENERALES (Compactos) ---
+        theme: 'grid',
+        styles: {
+            fontSize: 6.5,       // <--- Letra pequeña para que quepa todo
+            cellPadding: 1.5,    // <--- Menos relleno para ahorrar espacio
+            valign: 'middle',
+            overflow: 'linebreak', // <--- Importante: Texto largo salta de línea
+            lineWidth: 0.1,      // Líneas finas
+            lineColor: [200, 200, 200]
+        },
 
-        // 3. Definir Columnas y Filas (Igual que en Excel)
-        const columns = [
-            { header: 'NOMBRE', dataKey: 'nombre' },
-            { header: 'SERIAL', dataKey: 'serial' },
-            { header: 'MARCA', dataKey: 'marca' },
-            { header: 'MODELO', dataKey: 'modelo' },
-            { header: 'JUEGO', dataKey: 'juego' },
-            { header: 'TIPO', dataKey: 'tipo' },
-            { header: 'PUESTOS', dataKey: 'puestos' },
-            { header: 'MODO', dataKey: 'modo' },
-            { header: 'SOC', dataKey: 'sociedad' }, // Abreviado para espacio
-            { header: 'VALOR', dataKey: 'valor' },
-            { header: 'ESTADO', dataKey: 'estado' },
-            { header: 'LEGAL', dataKey: 'legal' },
-            { header: 'GRUPO', dataKey: 'grupo' },
-            { header: 'SALA', dataKey: 'sala' }
-        ];
+        // --- ESTILO ENCABEZADO ---
+        headStyles: { 
+            fillColor: [31, 78, 120], 
+            textColor: 255, 
+            fontSize: 7,         // Título un pelín más grande que el texto
+            fontStyle: 'bold',
+            halign: 'center',
+            valign: 'middle'
+        },
 
-        // Preparamos la data
-        const rows = currentFiltered.map(m => ({
-            nombre: (m.nombre || "").toUpperCase(),
-            serial: (m.serial || "N/A").toUpperCase(),
-            marca: (m.marca_nom || "").toUpperCase(),
-            modelo: (m.modelo_nom || "").toUpperCase(),
-            juego: (m.juego_nom || "").toUpperCase(),
-            tipo: (m.tipo_nom || "").toUpperCase(),
-            puestos: m.puestos || 1,
-            modo: (m.modo_nom || "").toUpperCase(),
-            sociedad: (m.sociedad_nom || "").toUpperCase(),
-            valor: (m.valor_nom || "").toUpperCase(),
-            estado: (m.estado_nom || "").toUpperCase(),
-            legal: (m.legal_nom || "NO").toUpperCase(),
-            grupo: (m.grupo_nom || "").toUpperCase(),
-            sala: (m.sala_nom || "").toUpperCase()
-        }));
+        // --- ESTILO FILAS (Cebra) ---
+        alternateRowStyles: { 
+            fillColor: [240, 245, 235] // Un verde/gris muy pálido para leer mejor
+        },
 
-        // 4. GENERAR TABLA BONITA (jsPDF-AutoTable)
-        doc.autoTable({
-            columns: columns,
-            body: rows,
-            startY: 28, // Empezar debajo del título
-            
-            // --- ESTILOS VISUALES (Igualando al Excel) ---
-            theme: 'grid', // Bordes finos
-            
-            // Estilo del Encabezado (Azul Oscuro y Letra Blanca)
-            headStyles: { 
-                fillColor: [31, 78, 120], // RGB de #1F4E78
-                textColor: 255, 
-                fontSize: 9, 
-                fontStyle: 'bold',
-                halign: 'center',
-                valign: 'middle'
-            },
-            
-            // Estilo de las Filas (Cebra: Blanco y Gris/Verdoso suave)
-            bodyStyles: { 
-                fontSize: 8, // Letra un poco más pequeña para que quepa todo
-                valign: 'middle' 
-            },
-            alternateRowStyles: { 
-                fillColor: [235, 241, 222] // RGB de #FFEBF1DE
-            },
-            
-            // Ajuste de columnas
-            styles: {
-                overflow: 'linebreak', // Si el texto es largo, salta de línea
-                cellPadding: 2
-            },
-            
-            // Anchos de columna específicos (Opcional, para dar prioridad)
-            columnStyles: {
-                nombre: { cellWidth: 35 },
-                serial: { cellWidth: 20 },
-                puestos: { cellWidth: 10, halign: 'center' },
-                sala: { cellWidth: 25 }
-            }
-        });
+        // --- ANCHOS DE COLUMNA PERSONALIZADOS ---
+        // Aquí distribuimos los 287mm disponibles (297mm hoja - 10mm márgenes)
+        columnStyles: {
+            nombre:    { cellWidth: 32, fontStyle: 'bold' }, // El más importante
+            serial:    { cellWidth: 20 },
+            marca:     { cellWidth: 18 },
+            modelo:    { cellWidth: 20 },
+            juego:     { cellWidth: 25 }, // Juegos suelen tener nombres largos
+            tipo:      { cellWidth: 15 },
+            puestos:   { cellWidth: 8, halign: 'center' }, // Muy pequeño
+            modo:      { cellWidth: 15 },
+            sociedad:  { cellWidth: 18 },
+            valor:     { cellWidth: 12 },
+            estado:    { cellWidth: 15 },
+            legal:     { cellWidth: 15 },
+            grupo:     { cellWidth: 20 },
+            sala:      { cellWidth: 'auto' } // El resto del espacio para la sala
+        }
+    });
 
-        // 5. Guardar archivo
-        const nombreArchivo = `Inventario_Maquinas_${fechaStr.replace(/\//g, '-')}.pdf`;
-        doc.save(nombreArchivo);
-    }
-
+    // 5. Guardar
+    const nombreArchivo = `Inventario_Maquinas_${fechaStr.replace(/\//g, '-')}.pdf`;
+    doc.save(nombreArchivo);
+}
     document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
     if ('serviceWorker' in navigator) {
