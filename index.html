@@ -587,11 +587,11 @@
         const workbook = new ExcelJS.Workbook();
         
         // --- FUNCIÓN HELPER PARA CREAR HOJAS ---
-        const agregarHoja = (nombreHoja, datos) => {
+        const agregarHoja = async (nombreHoja, datos) => { // OJO: La convertí en async para usar await en protect
             const safeName = (nombreHoja || "Sin Sala").substring(0, 30).replace(/[\/\\\?\*\]\[]/g, '-');
             const worksheet = workbook.addWorksheet(safeName);
 
-            // 1. Definimos las columnas (La propiedad width se sobreescribirá abajo)
+            // 1. Definimos las columnas
             worksheet.columns = [
                 { header: 'NOMBRE', key: 'nombre' },
                 { header: 'SERIAL', key: 'serial' },
@@ -634,16 +634,20 @@
             headerRow.height = 30; 
             
             headerRow.eachCell((cell) => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } }; // Azul
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } }; 
                 cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 14, name: 'Calibri' };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
                 cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                
+                // IMPORTANTE: Aseguramos que el título esté bloqueado
+                cell.protection = { locked: true }; 
             });
 
-            // 4. ESTILO "ZEBRA" (Filas alternas)
+            // 4. ESTILO "ZEBRA" Y DESBLOQUEO DE DATOS
             worksheet.eachRow((row, rowNumber) => {
                 if (rowNumber > 1) { 
                     row.eachCell({ includeEmpty: true }, (cell) => {
+                        // Estilos visuales
                         cell.border = { 
                             top: {style:'thin', color: {argb:'FFD9D9D9'}}, 
                             left: {style:'thin', color: {argb:'FFD9D9D9'}}, 
@@ -653,44 +657,55 @@
                         if (rowNumber % 2 === 0) {
                             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF1DE' } };
                         }
+
+                        // --- AQUÍ ESTÁ EL TRUCO ---
+                        // Desbloqueamos las celdas de datos para que el usuario pueda editar los valores si quiere
+                        // pero no podrá tocar la fila 1.
+                        cell.protection = { locked: false };
                     });
                 }
             });
 
-            // 5. AUTO-AJUSTE DINÁMICO MEJORADO
-            // Recorremos cada columna y calculamos el ancho basado en el contenido REAL
+            // 5. AUTO-AJUSTE DINÁMICO
             worksheet.columns.forEach(column => {
                 let maxLength = 0;
                 column.eachCell({ includeEmpty: true }, function(cell) {
                     let cellLength = cell.value ? cell.value.toString().length : 0;
-                    
-                    // Si es el título (fila 1), le damos un "peso" extra porque la letra es más grande (size 14)
-                    if (cell.row === 1) { 
-                        cellLength += 5; 
-                    }
-                    
+                    if (cell.row === 1) cellLength += 5; 
                     if (cellLength > maxLength) maxLength = cellLength;
                 });
-                // Asignamos el ancho calculado + un pequeño margen
                 column.width = maxLength < 12 ? 12 : maxLength + 2; 
             });
 
-            // NOTA: Eliminamos 'worksheet.autoFilter' y 'worksheet.views' como pediste.
+            // 6. ACTIVAR PROTECCIÓN DE HOJA (CONTRASEÑA)
+            // Esto hace efectivo el bloqueo. La contraseña aquí es "wisi123" (puedes cambiarla)
+            await worksheet.protect('25047058', {
+                selectLockedCells: true,   // Permite seleccionar títulos (pero no editar)
+                selectUnlockedCells: true, // Permite seleccionar datos
+                formatColumns: true,       // Permite al usuario cambiar ancho de columnas si lo necesita
+                formatRows: true,          // Permite cambiar alto de filas
+                autoFilter: true,          // Permite usar filtros si los hubiera
+                // insertRows: false,      // IMPIDE insertar filas (por defecto false)
+                // insertColumns: false,   // IMPIDE insertar columnas (por defecto false)
+                // deleteRows: false,      // IMPIDE borrar filas
+                // deleteColumns: false    // IMPIDE borrar columnas
+            });
         };
 
         // --- GENERACIÓN DE HOJAS ---
         
-        // 1. Hoja General
-        agregarHoja("TODAS LAS SALAS", currentFiltered);
+        // Como ahora agregarHoja es async, usamos await
+        await agregarHoja("Todas las Salas", currentFiltered);
 
-        // 2. Hojas por Sala
         const salasUnicas = [...new Set(currentFiltered.map(item => item.sala_nom || "Sin Asignar"))];
-        salasUnicas.forEach(sala => {
+        
+        // Usamos for...of para poder usar await dentro del loop ordenadamente
+        for (const sala of salasUnicas) {
             const datosSala = currentFiltered.filter(item => (item.sala_nom || "Sin Asignar") === sala);
             if (datosSala.length > 0) {
-                agregarHoja(sala, datosSala);
+                await agregarHoja(sala, datosSala);
             }
-        });
+        }
 
         // --- DESCARGAR ---
         const buffer = await workbook.xlsx.writeBuffer();
