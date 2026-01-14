@@ -586,13 +586,12 @@
 
     const workbook = new ExcelJS.Workbook();
     
-    // --- FUNCIÓN HELPER PARA CREAR HOJAS CON ESTILO ---
+    // --- FUNCIÓN HELPER PARA CREAR HOJAS ---
     const agregarHoja = (nombreHoja, datos) => {
-        // Limpiamos nombre
         const safeName = (nombreHoja || "Sin Sala").substring(0, 30).replace(/[\/\\\?\*\]\[]/g, '-');
         const worksheet = workbook.addWorksheet(safeName);
 
-        // 1. Definimos las columnas
+        // 1. Definimos las columnas (La propiedad width se sobreescribirá abajo)
         worksheet.columns = [
             { header: 'NOMBRE DE MÁQUINA', key: 'nombre' },
             { header: 'SERIAL', key: 'serial' },
@@ -628,60 +627,51 @@
 
         // 3. ESTILO DEL ENCABEZADO (Títulos Grandes)
         const headerRow = worksheet.getRow(1);
-        headerRow.height = 30; // Hacemos la fila más alta para que quepa la letra grande
+        headerRow.height = 30; 
         
         headerRow.eachCell((cell) => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } }; // Azul Oscuro Elegante
-            cell.font = { 
-                color: { argb: 'FFFFFFFF' }, // Blanco
-                bold: true, 
-                size: 14, // <--- LETRA MÁS GRANDE (Solicitado)
-                name: 'Calibri'
-            };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } }; // Azul
+            cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 14, name: 'Calibri' };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
-        // 4. ESTILO "ZEBRA" PARA LAS FILAS DE DATOS (Facilita la lectura)
-        // Empezamos desde la fila 2 hasta el final
+        // 4. ESTILO "ZEBRA" (Filas alternas)
         worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber > 1) { // Ignoramos el encabezado
+            if (rowNumber > 1) { 
                 row.eachCell({ includeEmpty: true }, (cell) => {
-                    // Bordes finos para todas las celdas
                     cell.border = { 
                         top: {style:'thin', color: {argb:'FFD9D9D9'}}, 
                         left: {style:'thin', color: {argb:'FFD9D9D9'}}, 
                         bottom: {style:'thin', color: {argb:'FFD9D9D9'}}, 
                         right: {style:'thin', color: {argb:'FFD9D9D9'}} 
                     };
-
-                    // Si la fila es PAR, le ponemos un fondo azul muy clarito
                     if (rowNumber % 2 === 0) {
-                        cell.fill = {
-                            type: 'pattern',
-                            pattern: 'solid',
-                            fgColor: { argb: 'FFEBF1DE' } // Un tono gris/verdoso muy suave y moderno (o usa 'FFE1EAF3' para azulito)
-                        };
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF1DE' } };
                     }
                 });
             }
         });
 
-        // 5. AUTO-AJUSTE DINÁMICO DE COLUMNAS
+        // 5. AUTO-AJUSTE DINÁMICO MEJORADO
+        // Recorremos cada columna y calculamos el ancho basado en el contenido REAL
         worksheet.columns.forEach(column => {
             let maxLength = 0;
             column.eachCell({ includeEmpty: true }, function(cell) {
-                const columnLength = cell.value ? cell.value.toString().length : 10;
-                if (columnLength > maxLength) maxLength = columnLength;
+                let cellLength = cell.value ? cell.value.toString().length : 0;
+                
+                // Si es el título (fila 1), le damos un "peso" extra porque la letra es más grande (size 14)
+                if (cell.row === 1) { 
+                    cellLength += 5; 
+                }
+                
+                if (cellLength > maxLength) maxLength = cellLength;
             });
-            // Le damos un poco más de espacio por la letra grande del título
-            column.width = maxLength < 12 ? 12 : maxLength + 3; 
+            // Asignamos el ancho calculado + un pequeño margen
+            column.width = maxLength < 12 ? 12 : maxLength + 2; 
         });
 
-        // 6. ACTIVAR FILTROS (Sin congelar paneles)
-        worksheet.autoFilter = { from: 'A1', to: { row: 1, column: worksheet.columns.length } };
-        
-        // NOTA: Eliminé la línea de 'worksheet.views' para quitar el bloqueo de celdas.
+        // NOTA: Eliminamos 'worksheet.autoFilter' y 'worksheet.views' como pediste.
     };
 
     // --- GENERACIÓN DE HOJAS ---
