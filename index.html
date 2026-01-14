@@ -35,6 +35,29 @@
         .detail-card h6 { font-size: 0.7rem; font-weight: 800; background: #f4f4f7; padding: 10px; margin: 0; color: #009ef7; text-transform: uppercase; }
         .is-invalid { border-color: #dc3545 !important; background-image: none !important; }
         .feedback-error { color: #dc3545; font-size: 0.7rem; margin-top: 2px; font-weight: bold; display: none; }
+
+        /* Transición suave para expandir/colapsar */
+        .table-container-limit {
+            max-height: 160px; /* Altura inicial fija */
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+
+        .table-container-full {
+            max-height: 1000px; /* Altura suficiente para mostrar todo */
+            overflow-y: auto;
+        }
+
+        /* Estilo del badge del contador */
+        .badge-counter {
+            background-color: #eef2f5; 
+            color: #1F4E78; 
+            border: 1px solid #1F4E78;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+        }
+
     </style>
 </head>
 <body>
@@ -420,21 +443,107 @@
         let aplicados = []; 
         for (const [k, v] of Object.entries(filtros)) { if (v !== "") aplicados.push(`${k}: ${v}`); }
         let txt = `Máquinas totales: ( <b>${total}</b> )`; if (aplicados.length > 0) txt += `, Filtros Totales: ( <b>${aplicados.length}</b> ), Filtros: ( ${aplicados.join(', ')} )`;
-        const content = `<div class="d-flex align-items-center justify-content-between w-100"><div>${txt}</div><div><button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles Estadísticos</button></div></div>`;
-        document.getElementById('tFoot').innerHTML = `<tr><td colspan="15">${content}</td></tr>`;
+        const content = `<div class="d-flex align-items-center justify-content-between w-100"><div>${txt}</div><div><button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles</button></div></div>`;
+        document.getElementById('tFoot').innerHTML = `<tr><td colspan="16">${content}</td></tr>`;
         document.getElementById('tHeadSummary').style.display = 'table-row'; document.getElementById('tHeadSummary').cells[0].innerHTML = content;
         document.getElementById('alertFiltrosDetalles').innerHTML = txt;
     }
     
     function abrirVistaDetalles(isRefresh = false) {
-        if(!isRefresh) { document.getElementById('section-lista').style.display = 'none'; document.getElementById('section-detalles').style.display = 'block'; }
-        const cont = document.getElementById('containerTablasDetalles'); cont.innerHTML = "";
-        const cats = [{ label: 'Grupos', key: 'grupo_nom' }, { label: 'Salas', key: 'sala_nom' }, { label: 'Marcas', key: 'marca_nom' }, { label: 'Modelos', key: 'modelo_nom' }, { label: 'Juegos', key: 'juego_nom' }, { label: 'Estados', key: 'estado_nom' }, { label: 'Sociedades', key: 'sociedad_nom' }, { label: 'Valores', key: 'valor_nom' },{ label: 'Tipos', key: 'tipo_nom' },{ label: 'Modos', key: 'modo_nom' }, ,{ label: 'Legal', key: 'legal_nom' }];
-        cats.forEach(c => {
-            const count = {}; currentFiltered.forEach(m => { let l = (c.key === 'modelo_nom') ? `${m.modelo_nom || 'N/A'} (${m.marca_nom || 'N/A'})` : (c.key === 'sala_nom') ? `${m.sala_nom || 'N/A'} (${m.grupo_nom || 'N/A'})` : m[c.key] || 'N/A'; count[l] = (count[l] || 0) + 1; });
+        if(!isRefresh) { 
+            document.getElementById('section-lista').style.display = 'none'; 
+            document.getElementById('section-detalles').style.display = 'block'; 
+        }
+        
+        const cont = document.getElementById('containerTablasDetalles'); 
+        cont.innerHTML = "";
+        
+        const cats = [
+            { label: 'Grupos', key: 'grupo_nom' }, 
+            { label: 'Salas', key: 'sala_nom' }, 
+            { label: 'Marcas', key: 'marca_nom' }, 
+            { label: 'Modelos', key: 'modelo_nom' }, 
+            { label: 'Juegos', key: 'juego_nom' }, 
+            { label: 'Estados', key: 'estado_nom' }, 
+            { label: 'Sociedades', key: 'sociedad_nom' }, 
+            { label: 'Valores', key: 'valor_nom' },
+            { label: 'Tipos', key: 'tipo_nom' },
+            { label: 'Modos', key: 'modo_nom' },
+            { label: 'Legal', key: 'legal_nom' }
+        ];
+
+        cats.forEach((c, index) => {
+            // 1. Contar elementos
+            const count = {}; 
+            currentFiltered.forEach(m => { 
+                let l = (c.key === 'modelo_nom') ? `${m.modelo_nom || 'N/A'} (${m.marca_nom || 'N/A'})` : 
+                        (c.key === 'sala_nom') ? `${m.sala_nom || 'N/A'} (${m.grupo_nom || 'N/A'})` : 
+                        m[c.key] || 'N/A'; 
+                count[l] = (count[l] || 0) + 1; 
+            });
+            
             const sorted = Object.entries(count).sort((a,b) => b[1] - a[1]);
-            cont.innerHTML += `<div class="col-md-3"><div class="card detail-card shadow-sm"><h6>${c.label}</h6><table class="table detail-table table-sm table-hover mb-0"><tbody>${sorted.map(([n, ct]) => `<tr><td>${n}</td><td class="text-center fw-bold text-primary" style="width:40px">${ct}</td></tr>`).join('')}</tbody></table></div></div>`;
+            const totalItems = sorted.length; // Total de categorías únicas (ej: 5 marcas)
+            const uniqueId = `card_detail_${index}`; // ID único para cada tarjeta
+
+            // 2. Definir si necesita botón "Ver más" (si tiene más de 5 items)
+            const showExpandBtn = totalItems > 5;
+
+            // 3. Construir HTML
+            let html = `
+            <div class="col-md-3">
+                <div class="card detail-card shadow-sm h-100">
+                    <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
+                        <h6 class="m-0 text-primary fw-bold text-uppercase" style="font-size:0.75rem; background:none; padding:0;">
+                            ${c.label}
+                        </h6>
+                        <span class="badge-counter fw-bold">${totalItems}</span>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div id="cont_${uniqueId}" class="table-container-limit">
+                            <table class="table detail-table table-sm table-hover mb-0">
+                                <tbody>
+                                    ${sorted.map(([n, ct]) => `
+                                        <tr>
+                                            <td class="ps-3 text-truncate" style="max-width: 180px;" title="${n}">${n}</td>
+                                            <td class="text-center fw-bold text-primary pe-3" style="width:40px">${ct}</td>
+                                        </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    ${showExpandBtn ? `
+                    <div class="card-footer p-0 bg-white border-top-0 text-center">
+                        <button onclick="toggleExpand('${uniqueId}')" id="btn_${uniqueId}" class="btn btn-link btn-sm text-decoration-none shadow-none" style="font-size:0.7rem; width:100%;">
+                            <i class="bi bi-chevron-down"></i> Ver todos (${totalItems})
+                        </button>
+                    </div>` : ''}
+                </div>
+            </div>`;
+            
+            cont.innerHTML += html;
         });
+    }
+
+    function toggleExpand(id) {
+        const container = document.getElementById(`cont_${id}`);
+        const btn = document.getElementById(`btn_${id}`);
+    
+        // Verificamos si tiene la clase "limit"
+        if (container.classList.contains('table-container-limit')) {
+            // EXPANDIR
+            container.classList.remove('table-container-limit');
+            container.classList.add('table-container-full');
+            btn.innerHTML = '<i class="bi bi-chevron-up"></i> Ver menos';
+        } else {
+            // COLAPSAR
+            container.classList.remove('table-container-full');
+            container.classList.add('table-container-limit');
+            // Recuperamos el número del texto original si quieres, o simplemente "Ver todos"
+            btn.innerHTML = '<i class="bi bi-chevron-down"></i> Ver todos';
+        }
     }
 
     function cambiarVista(v) {
