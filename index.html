@@ -58,6 +58,34 @@
             font-size: 0.7rem;
         }
 
+        /* Estilo para los filtros Multi-Select */
+        .dropdown-check-list {
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 0.75rem;
+        }
+        .dropdown-check-list .form-check {
+            padding: 0.3rem 0.8rem;
+            margin: 0;
+            cursor: pointer;
+        }
+        .dropdown-check-list .form-check:hover {
+            background-color: #f8f9fa;
+        }
+        .dropdown-toggle {
+            font-size: 0.75rem;
+            text-align: left;
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dropdown-toggle::after {
+            margin-left: auto;
+        }
+
     </style>
 </head>
 <body>
@@ -108,33 +136,30 @@
             </div>
             <div class="card mb-3" id="panelFiltros" style="display:none;">
                 <div class="card-body p-3">
-                    <div class="row g-2">
-                        <div class="col-md-3"><label class="filter-label">Nombre</label><input type="text" id="f-nombre" class="form-control form-filter shadow-none"></div>
-                        <div class="col-md-3"><label class="filter-label">Serial</label><input type="text" id="f-serial" class="form-control form-filter shadow-none"></div>
-                        <div class="col-md-3"><label class="filter-label">Sociedad</label><select id="f-sociedad" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-3"><label class="filter-label">Legal</label><select id="f-legal" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3"><label class="filter-label">Nombre</label><input type="text" id="f-nombre" class="form-control form-filter shadow-none" placeholder="Buscar..."></div>
+                        <div class="col-md-3"><label class="filter-label">Serial</label><input type="text" id="f-serial" class="form-control form-filter shadow-none" placeholder="Buscar..."></div>
+                        <div class="col-md-3" id="container-f-sociedad"></div> <div class="col-md-3" id="container-f-legal"></div>    </div>
+                    
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4" id="container-f-marca"></div>
+                        <div class="col-md-4" id="container-f-modelo"></div>
+                        <div class="col-md-4" id="container-f-juego"></div>
                     </div>
+            
                     <div class="row g-2">
-                        <div class="col-md-4"><label class="filter-label">Marca</label><select id="f-marca" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-4"><label class="filter-label">Modelo</label><select id="f-modelo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-4"><label class="filter-label">Juego</label><select id="f-juego" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
+                        <div class="col-md-2" id="container-f-grupo"></div>
+                        <div class="col-md-2" id="container-f-sucursal"></div>
+                        <div class="col-md-2" id="container-f-estado"></div>
+                        <div class="col-md-2" id="container-f-valor"></div>
+                        <div class="col-md-2" id="container-f-tipo"></div>
+                        <div class="col-md-2" id="container-f-modo"></div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-2"><label class="filter-label">Grupo</label><select id="f-grupo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Sala</label><select id="f-sucursal" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Estado</label><select id="f-estado" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Valor</label><select id="f-valor" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Tipo</label><select id="f-tipo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                        <div class="col-md-2"><label class="filter-label">Modo</label><select id="f-modo" class="form-select form-filter shadow-none"><option value="">TODOS</option></select></div>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-4 mt-3"><button class="btn btn-secondary btn-action w-100" onclick="resetFiltros()">Limpiar</button></div>
+            
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-4 mt-3"><button class="btn btn-secondary btn-action w-100" onclick="resetFiltros()">Limpiar Filtros</button></div>
                         <div class="col-md-4 mt-3"><button class="btn btn-warning btn-action w-100 fw-bold" onclick="exportarExcel()">Excel</button></div>
-                        <div class="col-md-4 mt-3">
-                            <button class="btn btn-danger btn-action w-100 fw-bold" onclick="exportarPDF()">
-                                <i class="bi bi-file-pdf"></i> PDF
-                            </button>
-                        </div>
+                        <div class="col-md-4 mt-3"><button class="btn btn-danger btn-action w-100 fw-bold" onclick="exportarPDF()"><i class="bi bi-file-pdf"></i> PDF</button></div>
                     </div>
                 </div>
             </div>
@@ -178,6 +203,131 @@
     const modalError = new bootstrap.Modal(document.getElementById('modalErrorRelacion'));
     const modalSucursales = new bootstrap.Modal(document.getElementById('modalSucursales'));
     
+    // --- ESTADO DE LOS FILTROS (MEMORIA) ---
+    // Aquí guardamos qué casillas están marcadas para no perderlas al refrescar
+    let estadoFiltros = {
+        grupo: [], sucursal: [], marca: [], modelo: [], juego: [],
+        estado: [], sociedad: [], valor: [], tipo: [], modo: [], legal: []
+    };
+
+    // Configuración de campos y sus contenedores
+    const configFiltros = [
+        { id: 'grupo', key: 'grupo_nom', label: 'Grupo' },
+        { id: 'sucursal', key: 'sala_nom', label: 'Sala' }, // Depende de Grupo
+        { id: 'marca', key: 'marca_nom', label: 'Marca' },
+        { id: 'modelo', key: 'modelo_nom', label: 'Modelo' }, // Depende de Marca
+        { id: 'juego', key: 'juego_nom', label: 'Juego' },
+        { id: 'estado', key: 'estado_nom', label: 'Estado' },
+        { id: 'sociedad', key: 'sociedad_nom', label: 'Sociedad' },
+        { id: 'valor', key: 'valor_nom', label: 'Valor' },
+        { id: 'tipo', key: 'tipo_nom', label: 'Tipo' },
+        { id: 'modo', key: 'modo_nom', label: 'Modo' },
+        { id: 'legal', key: 'legal_nom', label: 'Legal' }
+    ];
+
+    function renderizarFiltrosMultiselect() {
+        configFiltros.forEach(conf => {
+            const container = document.getElementById(`container-f-${conf.id}`);
+            if (!container) return;
+
+            // 1. Determinar de dónde sacar las opciones
+            // Para evitar el "loop" donde las opciones desaparecen, sacamos las opciones de 'allData' (Global)
+            // PERO podemos ocultar o deshabilitar las que no coincidan con la cascada si quisiéramos.
+            // Por simplicidad y UX robusta: mostramos TODAS las opciones posibles siempre, 
+            // pero al filtrar sí aplicamos la lógica 'AND'.
+            
+            // Obtenemos valores únicos ordenados
+            let uniqueValues = [...new Set(allData.map(item => item[conf.key] || "N/A"))].sort();
+            
+            // Lógica de CASCADA SIMPLE: 
+            // Si hay GRUPOS seleccionados, en SALA solo mostramos las salas de esos grupos
+            if(conf.id === 'sucursal' && estadoFiltros.grupo.length > 0) {
+                uniqueValues = [...new Set(allData
+                    .filter(i => estadoFiltros.grupo.includes(i.grupo_nom || "N/A"))
+                    .map(i => i.sala_nom || "N/A"))].sort();
+            }
+            // Si hay MARCAS seleccionadas, en MODELO solo mostramos modelos de esas marcas
+            if(conf.id === 'modelo' && estadoFiltros.marca.length > 0) {
+                uniqueValues = [...new Set(allData
+                    .filter(i => estadoFiltros.marca.includes(i.marca_nom || "N/A"))
+                    .map(i => i.modelo_nom || "N/A"))].sort();
+            }
+
+            // 2. Construir el HTML del Dropdown
+            const seleccionados = estadoFiltros[conf.id] || [];
+            const labelBtn = seleccionados.length === 0 ? 'TODOS' : 
+                            seleccionados.length === uniqueValues.length ? 'TODOS' : 
+                            `(${seleccionados.length}) Seleccionados`;
+            
+            const btnClass = seleccionados.length > 0 ? 'btn-primary' : 'btn-outline-secondary';
+
+            let html = `
+                <label class="filter-label">${conf.label}</label>
+                <div class="dropdown">
+                    <button class="btn ${btnClass} dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                        ${labelBtn}
+                    </button>
+                    <div class="dropdown-menu w-100 p-0 shadow">
+                        <div class="p-2 border-bottom bg-light d-flex justify-content-between">
+                            <span class="small fw-bold text-muted">Opciones</span>
+                            <a href="#" onclick="limpiarUnFiltro('${conf.id}')" class="small text-decoration-none">Limpiar</a>
+                        </div>
+                        <div class="dropdown-check-list p-2">
+            `;
+
+            uniqueValues.forEach(val => {
+                const isChecked = seleccionados.includes(val) ? 'checked' : '';
+                html += `
+                    <div class="form-check">
+                        <input class="form-check-input filter-chk" type="checkbox" 
+                            data-filter-type="${conf.id}" value="${val}" id="chk_${conf.id}_${val.replace(/\s+/g, '')}" ${isChecked}
+                            onchange="actualizarEstadoFiltro('${conf.id}', this.value, this.checked)">
+                        <label class="form-check-label w-100" for="chk_${conf.id}_${val.replace(/\s+/g, '')}">
+                            ${val}
+                        </label>
+                    </div>
+                `;
+            });
+
+            html += `   </div>
+                    </div>
+                </div>`;
+
+            container.innerHTML = html;
+        });
+    }
+
+    // Función que se llama cada vez que haces clic en un checkbox
+    function actualizarEstadoFiltro(tipo, valor, marcado) {
+        if (marcado) {
+            if (!estadoFiltros[tipo].includes(valor)) {
+                estadoFiltros[tipo].push(valor);
+            }
+        } else {
+            estadoFiltros[tipo] = estadoFiltros[tipo].filter(v => v !== valor);
+        }
+        
+        // Si cambiamos un "padre" (Grupo o Marca), debemos regenerar los filtros "hijos" para la cascada
+        if(tipo === 'grupo' || tipo === 'marca') {
+            // Limpiamos la selección de los hijos para evitar incoherencias
+            if(tipo === 'grupo') estadoFiltros.sucursal = []; 
+            if(tipo === 'marca') estadoFiltros.modelo = [];
+            
+            renderizarFiltrosMultiselect(); // Regeneramos UI
+        } else {
+            // Si es otro filtro, solo actualizamos el botón visualmente (opcional) o regeneramos todo
+            // Para que se vea el contador "(2) Seleccionados", regeneramos:
+            renderizarFiltrosMultiselect(); 
+        }
+
+        aplicarFiltros(); // Aplicamos filtro a la tabla
+    }
+
+    function limpiarUnFiltro(tipo) {
+        estadoFiltros[tipo] = [];
+        renderizarFiltrosMultiselect();
+        aplicarFiltros();
+    }
 
     function aplicarPermisosUI() {
         if(!usuarioActual) return;
@@ -239,39 +389,48 @@
         const res = await fetch(`${API}/${vista}?userId=${usuarioActual.id}`);
         const data = await res.json();
         allData = Array.isArray(data) ? data : [];
-        if (vista === 'maquina') aplicarFiltros(); else renderizarTabla(allData);
+        if (vista === 'maquina') {
+            // Renderizamos los desplegables por primera vez con la data nueva
+            renderizarFiltrosMultiselect(); 
+            aplicarFiltros();
+        } else {
+            renderizarTabla(allData);
+        }
+
     }
 
     function aplicarFiltros() {
         if (vista !== 'maquina') return;
-        const rawNombre = document.getElementById('f-nombre')?.value || "";
-        const rawSerial = document.getElementById('f-serial')?.value || "";
-        const fNombre = rawNombre.toLowerCase();
-        const fSerial = rawSerial.toLowerCase();
-        const getS = (id) => document.getElementById(id)?.value || "";
-        const f = {
-            Grupo: getS('f-grupo'), Sala: getS('f-sucursal'), Marca: getS('f-marca'),
-            Modelo: getS('f-modelo'), Juego: getS('f-juego'), Estado: getS('f-estado'),
-            Sociedad: getS('f-sociedad'), Valor: getS('f-valor'), Tipo: getS('f-tipo'), Modo: getS('f-modo'),  Legal: getS('f-legal')
-        };
-        currentFiltered = allData.filter(m => 
-            ((m.nombre || "").toLowerCase().includes(fNombre)) && 
-            ((m.serial || "").toLowerCase().includes(fSerial)) &&
-            (f.Grupo === "" || (m.grupo_nom || "") === f.Grupo) &&
-            (f.Sala === "" || (m.sala_nom || "") === f.Sala) &&
-            (f.Marca === "" || (m.marca_nom || "") === f.Marca) &&
-            (f.Modelo === "" || (m.modelo_nom || "") === f.Modelo) &&
-            (f.Juego === "" || (m.juego_nom || "") === f.Juego) &&
-            (f.Estado === "" || (m.estado_nom || "") === f.Estado) &&
-            (f.Sociedad === "" || (m.sociedad_nom || "") === f.Sociedad) &&
-            (f.Valor === "" || (m.valor_nom || "") === f.Valor) &&
-            (f.Tipo === "" || (m.tipo_nom || "") === f.Tipo) &&
-            (f.Modo === "" || (m.modo_nom || "") === f.Modo) &&
-            (f.Legal === "" || (m.legal_nom || "") === f.Legal)
-        );
+        
+        const fNombre = (document.getElementById('f-nombre')?.value || "").toLowerCase();
+        const fSerial = (document.getElementById('f-serial')?.value || "").toLowerCase();
+
+        currentFiltered = allData.filter(m => {
+            // 1. Filtro Texto (Nombre y Serial)
+            if (! (m.nombre || "").toLowerCase().includes(fNombre)) return false;
+            if (! (m.serial || "").toLowerCase().includes(fSerial)) return false;
+
+            // 2. Filtros Multi-Select (Lógica: Si el array tiene items, el valor DEBE estar dentro)
+            // Recorremos la configuración para no escribir 10 ifs
+            for (const conf of configFiltros) {
+                const seleccionados = estadoFiltros[conf.id];
+                const valorMaquina = m[conf.key] || "N/A";
+                
+                // Si hay algo seleccionado en este filtro Y la máquina no tiene ese valor -> Fuera
+                if (seleccionados.length > 0 && !seleccionados.includes(valorMaquina)) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+
         renderizarTabla(currentFiltered);
-        actualizarDropdownsDinamicos(currentFiltered);
-        generarResumenReporte(currentFiltered.length, { Nombre: rawNombre, Serial: rawSerial, ...f });
+        
+        // Generamos resumen visual para el footer
+        const totalFiltrosActivos = Object.values(estadoFiltros).reduce((acc, arr) => acc + arr.length, 0) 
+                                + (fNombre ? 1 : 0) + (fSerial ? 1 : 0);
+        generarResumenReporte(currentFiltered.length, { "Filtros Activos": totalFiltrosActivos });
     }
 
     function renderizarTabla(data) {
@@ -730,7 +889,18 @@
     }
     function cancelarFormulario() { document.getElementById('section-formulario').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
-    function resetFiltros() { ['f-nombre','f-serial','f-grupo','f-sucursal','f-marca','f-modelo','f-juego','f-estado','f-sociedad','f-valor','f-tipo','f-modo','f-legal'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; }); cargarTabla(); }
+    function resetFiltros() {
+        // 1. Limpiar inputs de texto
+        document.getElementById('f-nombre').value = "";
+        document.getElementById('f-serial').value = "";
+        
+        // 2. Limpiar Arrays de selección
+        Object.keys(estadoFiltros).forEach(k => estadoFiltros[k] = []);
+        
+        // 3. Regenerar
+        renderizarFiltrosMultiselect();
+        aplicarFiltros();
+    }
     function controladorAccionNuevo() { if(vista === 'maquina') abrirEditorMaquina(); else abrirModalParametro(); }
     async function exportarExcel() {
         if (currentFiltered.length === 0) return alert("No hay datos para exportar");
@@ -982,8 +1152,16 @@
         const nombreArchivo = `Inventario_Maquinas_${fechaStr.replace(/\//g, '-')}.pdf`;
         doc.save(nombreArchivo);
     }
-    document.querySelectorAll('.form-filter').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'keyup', aplicarFiltros));
     
+    // --- PEGA AQUÍ LOS LISTENERS DE LOS CAMPOS DE TEXTO ---
+    const inputNombre = document.getElementById('f-nombre');
+    const inputSerial = document.getElementById('f-serial');
+    
+    if(inputNombre) inputNombre.addEventListener('keyup', aplicarFiltros);
+    if(inputSerial) inputSerial.addEventListener('keyup', aplicarFiltros);
+
+    // ------------------------------------------------------
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail', err));
