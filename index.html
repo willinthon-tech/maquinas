@@ -213,9 +213,9 @@
     // Configuración de campos y sus contenedores
     const configFiltros = [
         { id: 'grupo', key: 'grupo_nom', label: 'Grupo' },
-        { id: 'sucursal', key: 'sala_nom', label: 'Sala' }, // Depende de Grupo
+        { id: 'sucursal', key: 'sala_nom', label: 'Sala' },
         { id: 'marca', key: 'marca_nom', label: 'Marca' },
-        { id: 'modelo', key: 'modelo_nom', label: 'Modelo' }, // Depende de Marca
+        { id: 'modelo', key: 'modelo_nom', label: 'Modelo' },
         { id: 'juego', key: 'juego_nom', label: 'Juego' },
         { id: 'estado', key: 'estado_nom', label: 'Estado' },
         { id: 'sociedad', key: 'sociedad_nom', label: 'Sociedad' },
@@ -225,69 +225,109 @@
         { id: 'legal', key: 'legal_nom', label: 'Legal' }
     ];
 
-    function renderizarFiltrosMultiselect() {
+    // Función Helper: Obtiene la data filtrada ignorando UN filtro específico.
+    // Esto sirve para llenar las opciones del dropdown "Marca", considerando lo que elegiste en "Grupo",
+    // pero ignorando lo que elegiste en "Marca" (para que sigas viendo las otras marcas disponibles).
+    function obtenerOpcionesDisponibles(filtroIgnorado) {
+        const fNombre = (document.getElementById('f-nombre')?.value || "").toLowerCase();
+        const fSerial = (document.getElementById('f-serial')?.value || "").toLowerCase();
+
+        return allData.filter(m => {
+            // 1. Filtros de Texto (Siempre aplican)
+            if (! (m.nombre || "").toLowerCase().includes(fNombre)) return false;
+            if (! (m.serial || "").toLowerCase().includes(fSerial)) return false;
+
+            // 2. Filtros de Selects (Ignorando el actual)
+            for (const conf of configFiltros) {
+                if (conf.id === filtroIgnorado) continue; // SALTAMOS el filtro que estamos renderizando
+                
+                const seleccionados = estadoFiltros[conf.id];
+                const valorMaquina = m[conf.key] || "N/A";
+                
+                if (seleccionados.length > 0 && !seleccionados.includes(valorMaquina)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    // filtroActivo: Es el ID del filtro que el usuario está tocando en este momento.
+    // Si pasamos este parámetro, NO redibujamos ese filtro para evitar que el menú se cierre.
+    function renderizarFiltrosMultiselect(filtroActivo = null) {
         configFiltros.forEach(conf => {
+            // Si el usuario está interactuando con este filtro, NO lo tocamos visualmente
+            // para no interrumpir su acción (el menú se cerraría si recargamos el HTML).
+            if (conf.id === filtroActivo) {
+                // Solo actualizamos el texto del botón para reflejar la cantidad, pero no el menú
+                actualizarTextoBoton(conf.id); 
+                return; 
+            }
+
             const container = document.getElementById(`container-f-${conf.id}`);
             if (!container) return;
 
-            // 1. Determinar de dónde sacar las opciones
-            // Para evitar el "loop" donde las opciones desaparecen, sacamos las opciones de 'allData' (Global)
-            // PERO podemos ocultar o deshabilitar las que no coincidan con la cascada si quisiéramos.
-            // Por simplicidad y UX robusta: mostramos TODAS las opciones posibles siempre, 
-            // pero al filtrar sí aplicamos la lógica 'AND'.
+            // 1. Obtenemos la data disponible basada en TODOS los otros filtros
+            const dataContexto = obtenerOpcionesDisponibles(conf.id);
             
-            // Obtenemos valores únicos ordenados
-            let uniqueValues = [...new Set(allData.map(item => item[conf.key] || "N/A"))].sort();
-            
-            // Lógica de CASCADA SIMPLE: 
-            // Si hay GRUPOS seleccionados, en SALA solo mostramos las salas de esos grupos
-            if(conf.id === 'sucursal' && estadoFiltros.grupo.length > 0) {
-                uniqueValues = [...new Set(allData
-                    .filter(i => estadoFiltros.grupo.includes(i.grupo_nom || "N/A"))
-                    .map(i => i.sala_nom || "N/A"))].sort();
-            }
-            // Si hay MARCAS seleccionadas, en MODELO solo mostramos modelos de esas marcas
-            if(conf.id === 'modelo' && estadoFiltros.marca.length > 0) {
-                uniqueValues = [...new Set(allData
-                    .filter(i => estadoFiltros.marca.includes(i.marca_nom || "N/A"))
-                    .map(i => i.modelo_nom || "N/A"))].sort();
-            }
+            // 2. Sacamos los valores únicos disponibles actualmente
+            let uniqueValues = [...new Set(dataContexto.map(item => item[conf.key] || "N/A"))].sort();
 
-            // 2. Construir el HTML del Dropdown
+            // 3. Renderizamos HTML
             const seleccionados = estadoFiltros[conf.id] || [];
-            const labelBtn = seleccionados.length === 0 ? 'TODOS' : 
-                            seleccionados.length === uniqueValues.length ? 'TODOS' : 
-                            `(${seleccionados.length}) Seleccionados`;
             
-            const btnClass = seleccionados.length > 0 ? 'btn-primary' : 'btn-outline-secondary';
+            // Lógica del botón (Texto)
+            let labelBtn = 'TODOS';
+            let btnClass = 'btn-outline-secondary';
+            
+            if (seleccionados.length > 0) {
+                // Verificamos si los seleccionados siguen siendo válidos en el contexto actual
+                // (Ej: Si seleccionaste Sala X, pero cambiaste a Grupo Y donde Sala X no existe)
+                const validos = seleccionados.filter(s => uniqueValues.includes(s));
+                
+                // Si quedaron seleccionados inválidos (huérfanos), podrías limpiarlos aquí, 
+                // pero visualmente a veces es mejor dejarlos marcados aunque no traigan data, 
+                // o limpiarlos. Vamos a dejarlos para evitar confusión, pero el botón dirá la verdad.
+                
+                if (validos.length > 0) {
+                    labelBtn = validos.length === uniqueValues.length ? 'TODOS' : `(${validos.length}) Selec.`;
+                    btnClass = 'btn-primary';
+                }
+            }
 
             let html = `
                 <label class="filter-label">${conf.label}</label>
                 <div class="dropdown">
-                    <button class="btn ${btnClass} dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                    <button class="btn ${btnClass} dropdown-toggle w-100" type="button" 
+                            id="btn_drop_${conf.id}" data-bs-toggle="dropdown" data-bs-auto-close="outside">
                         ${labelBtn}
                     </button>
                     <div class="dropdown-menu w-100 p-0 shadow">
                         <div class="p-2 border-bottom bg-light d-flex justify-content-between">
-                            <span class="small fw-bold text-muted">Opciones</span>
+                            <span class="small fw-bold text-muted">Opciones (${uniqueValues.length})</span>
                             <a href="#" onclick="limpiarUnFiltro('${conf.id}')" class="small text-decoration-none">Limpiar</a>
                         </div>
                         <div class="dropdown-check-list p-2">
             `;
 
-            uniqueValues.forEach(val => {
-                const isChecked = seleccionados.includes(val) ? 'checked' : '';
-                html += `
-                    <div class="form-check">
-                        <input class="form-check-input filter-chk" type="checkbox" 
-                            data-filter-type="${conf.id}" value="${val}" id="chk_${conf.id}_${val.replace(/\s+/g, '')}" ${isChecked}
-                            onchange="actualizarEstadoFiltro('${conf.id}', this.value, this.checked)">
-                        <label class="form-check-label w-100" for="chk_${conf.id}_${val.replace(/\s+/g, '')}">
-                            ${val}
-                        </label>
-                    </div>
-                `;
-            });
+            if (uniqueValues.length === 0) {
+                html += `<div class="text-muted small text-center p-2">Sin opciones</div>`;
+            } else {
+                uniqueValues.forEach(val => {
+                    const isChecked = seleccionados.includes(val) ? 'checked' : '';
+                    // Deshabilitamos visualmente si está checkeado pero ya no existe en la data (opcional)
+                    html += `
+                        <div class="form-check">
+                            <input class="form-check-input filter-chk" type="checkbox" 
+                                data-filter-type="${conf.id}" value="${val}" id="chk_${conf.id}_${val.replace(/\s+/g, '')}" ${isChecked}
+                                onchange="actualizarEstadoFiltro('${conf.id}', this.value, this.checked)">
+                            <label class="form-check-label w-100" for="chk_${conf.id}_${val.replace(/\s+/g, '')}">
+                                ${val}
+                            </label>
+                        </div>
+                    `;
+                });
+            }
 
             html += `   </div>
                     </div>
@@ -295,6 +335,24 @@
 
             container.innerHTML = html;
         });
+    }
+
+    // Función auxiliar solo para actualizar el texto del botón del filtro activo sin cerrar el menú
+    function actualizarTextoBoton(id) {
+        const btn = document.getElementById(`btn_drop_${id}`);
+        if(!btn) return;
+        const seleccionados = estadoFiltros[id];
+        const totalPosibles = document.querySelectorAll(`#container-f-${id} .filter-chk`).length; // Aproximación
+        
+        if (seleccionados.length > 0) {
+            btn.innerText = `(${seleccionados.length}) Selec.`;
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-primary');
+        } else {
+            btn.innerText = 'TODOS';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-secondary');
+        }
     }
 
     // Función que se llama cada vez que haces clic en un checkbox
@@ -307,26 +365,18 @@
             estadoFiltros[tipo] = estadoFiltros[tipo].filter(v => v !== valor);
         }
         
-        // Si cambiamos un "padre" (Grupo o Marca), debemos regenerar los filtros "hijos" para la cascada
-        if(tipo === 'grupo' || tipo === 'marca') {
-            // Limpiamos la selección de los hijos para evitar incoherencias
-            if(tipo === 'grupo') estadoFiltros.sucursal = []; 
-            if(tipo === 'marca') estadoFiltros.modelo = [];
-            
-            renderizarFiltrosMultiselect(); // Regeneramos UI
-        } else {
-            // Si es otro filtro, solo actualizamos el botón visualmente (opcional) o regeneramos todo
-            // Para que se vea el contador "(2) Seleccionados", regeneramos:
-            renderizarFiltrosMultiselect(); 
-        }
+        // 1. Aplicamos el filtro a la tabla inmediatamente
+        aplicarFiltros(); 
 
-        aplicarFiltros(); // Aplicamos filtro a la tabla
+        // 2. IMPORTANTE: Regeneramos LOS OTROS dropdowns para que reaccionen a este cambio.
+        // Pasamos 'tipo' para decirle: "No recargues este filtro, que lo tengo abierto".
+        renderizarFiltrosMultiselect(tipo);
     }
 
     function limpiarUnFiltro(tipo) {
         estadoFiltros[tipo] = [];
-        renderizarFiltrosMultiselect();
         aplicarFiltros();
+        renderizarFiltrosMultiselect(null); // Aquí sí regeneramos todo porque el click cerró el menú
     }
 
     function aplicarPermisosUI() {
@@ -390,7 +440,7 @@
         const data = await res.json();
         allData = Array.isArray(data) ? data : [];
         if (vista === 'maquina') {
-            // Renderizamos los desplegables por primera vez con la data nueva
+            // Renderizado inicial limpio
             renderizarFiltrosMultiselect(); 
             aplicarFiltros();
         } else {
@@ -400,34 +450,41 @@
     }
 
     function aplicarFiltros() {
+        // Si cambian los inputs de texto, también queremos que los dropdowns se actualicen
+        // para mostrar solo opciones compatibles con ese texto.
+        const activeElement = document.activeElement;
+        const isTyping = (activeElement.id === 'f-nombre' || activeElement.id === 'f-serial');
+
+        // Si estoy escribiendo, NO quiero redibujar los filtros a cada letra porque es lento visualmente,
+        // pero si quiero filtrar la tabla.
+        // Opcional: Si quieres que los dropdowns se filtren mientras escribes, llama a renderizarFiltrosMultiselect(null) aquí.
+        if(isTyping) {
+            renderizarFiltrosMultiselect(); 
+        }
+
         if (vista !== 'maquina') return;
         
+        // Usamos la misma lógica "Global" para la tabla
+        // Filtramos la data considerando TODOS los filtros activos
         const fNombre = (document.getElementById('f-nombre')?.value || "").toLowerCase();
         const fSerial = (document.getElementById('f-serial')?.value || "").toLowerCase();
 
         currentFiltered = allData.filter(m => {
-            // 1. Filtro Texto (Nombre y Serial)
             if (! (m.nombre || "").toLowerCase().includes(fNombre)) return false;
             if (! (m.serial || "").toLowerCase().includes(fSerial)) return false;
 
-            // 2. Filtros Multi-Select (Lógica: Si el array tiene items, el valor DEBE estar dentro)
-            // Recorremos la configuración para no escribir 10 ifs
             for (const conf of configFiltros) {
                 const seleccionados = estadoFiltros[conf.id];
                 const valorMaquina = m[conf.key] || "N/A";
-                
-                // Si hay algo seleccionado en este filtro Y la máquina no tiene ese valor -> Fuera
                 if (seleccionados.length > 0 && !seleccionados.includes(valorMaquina)) {
                     return false;
                 }
             }
-            
             return true;
         });
 
         renderizarTabla(currentFiltered);
         
-        // Generamos resumen visual para el footer
         const totalFiltrosActivos = Object.values(estadoFiltros).reduce((acc, arr) => acc + arr.length, 0) 
                                 + (fNombre ? 1 : 0) + (fSerial ? 1 : 0);
         generarResumenReporte(currentFiltered.length, { "Filtros Activos": totalFiltrosActivos });
@@ -889,18 +946,15 @@
     }
     function cancelarFormulario() { document.getElementById('section-formulario').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
     function cerrarVistaDetalles() { document.getElementById('section-detalles').style.display = 'none'; document.getElementById('section-lista').style.display = 'block'; }
+    
     function resetFiltros() {
-        // 1. Limpiar inputs de texto
         document.getElementById('f-nombre').value = "";
         document.getElementById('f-serial').value = "";
-        
-        // 2. Limpiar Arrays de selección
         Object.keys(estadoFiltros).forEach(k => estadoFiltros[k] = []);
-        
-        // 3. Regenerar
         renderizarFiltrosMultiselect();
         aplicarFiltros();
     }
+
     function controladorAccionNuevo() { if(vista === 'maquina') abrirEditorMaquina(); else abrirModalParametro(); }
     async function exportarExcel() {
         if (currentFiltered.length === 0) return alert("No hay datos para exportar");
