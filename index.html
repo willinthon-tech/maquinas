@@ -487,7 +487,8 @@
         
         const totalFiltrosActivos = Object.values(estadoFiltros).reduce((acc, arr) => acc + arr.length, 0) 
                                 + (fNombre ? 1 : 0) + (fSerial ? 1 : 0);
-        generarResumenReporte(currentFiltered.length, { "Filtros Activos": totalFiltrosActivos });
+        // CAMBIO AQUÍ: Solo pasamos la cantidad, la función nueva lee los filtros globales
+        generarResumenReporte(currentFiltered.length);
     }
 
     function renderizarTabla(data) {
@@ -661,15 +662,81 @@
         });
     }
 
-    function generarResumenReporte(total, filtros) {
+    function generarResumenReporte(totalRegistros) {
         if (vista !== 'maquina') return;
-        let aplicados = []; 
-        for (const [k, v] of Object.entries(filtros)) { if (v !== "") aplicados.push(`${k}: ${v}`); }
-        let txt = `Máquinas totales: ( <b>${total}</b> )`; if (aplicados.length > 0) txt += `, Filtros Totales: ( <b>${aplicados.length}</b> ), Filtros: ( ${aplicados.join(', ')} )`;
-        const content = `<div class="d-flex align-items-center justify-content-between w-100"><div>${txt}</div><div><button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles</button></div></div>`;
-        document.getElementById('tFoot').innerHTML = `<tr><td colspan="16">${content}</td></tr>`;
-        document.getElementById('tHeadSummary').style.display = 'table-row'; document.getElementById('tHeadSummary').cells[0].innerHTML = content;
-        document.getElementById('alertFiltrosDetalles').innerHTML = txt;
+
+        let descripciones = [];
+        let contadorCategorias = 0; // Contará cuántos tipos de filtros se usaron (ej: Nombre + Sala = 2)
+
+        // 1. Revisar Filtros de Texto
+        const fNombre = document.getElementById('f-nombre')?.value || "";
+        const fSerial = document.getElementById('f-serial')?.value || "";
+
+        if (fNombre) {
+            descripciones.push(`Nombre: [ "${fNombre}" ]`);
+            contadorCategorias++;
+        }
+        if (fSerial) {
+            descripciones.push(`Serial: [ "${fSerial}" ]`);
+            contadorCategorias++;
+        }
+
+        // 2. Revisar Filtros de Selección (Multiselect)
+        // Recorremos la configuración para usar la etiqueta bonita ("Sala" en vez de "sucursal")
+        configFiltros.forEach(conf => {
+            const seleccionados = estadoFiltros[conf.id];
+            
+            if (seleccionados && seleccionados.length > 0) {
+                contadorCategorias++;
+                // Aquí unimos los valores con coma: [ Sala 1, Sala 2 ]
+                const listaValores = seleccionados.join(', ');
+                // Agregamos al array de descripciones con formato negrita para el título
+                descripciones.push(`<b>${conf.label}</b>: [ ${listaValores} ]`);
+            }
+        });
+
+        // 3. Construir el texto final
+        let textoDetalle = "Ninguno";
+        if (descripciones.length > 0) {
+            textoDetalle = descripciones.join(', '); // Une las categorías con coma
+        }
+
+        // 4. HTML para el pie de tabla y la vista de detalles
+        const htmlContenido = `
+            <div class="d-flex align-items-center justify-content-between w-100" style="font-size: 0.75rem;">
+                <div>
+                    <span class="me-3">Máquinas totales ( <b>${totalRegistros}</b> )</span>
+                    <span class="me-3">Filtros totales ( <b>${contadorCategorias}</b> )</span>
+                    <span>Filtros aplicados: ( ${textoDetalle} )</span>
+                </div>
+                <div>
+                    <button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles</button>
+                </div>
+            </div>
+        `;
+
+        // 5. Inyectar en el DOM (Footer de tabla y Cabecera flotante)
+        const tFoot = document.getElementById('tFoot');
+        const tHeadSummary = document.getElementById('tHeadSummary');
+        const alertDetalles = document.getElementById('alertFiltrosDetalles');
+
+        // Pie de tabla
+        if (tFoot) tFoot.innerHTML = `<tr><td colspan="16" class="p-2 bg-light border-top">${htmlContenido}</td></tr>`;
+
+        // Cabecera flotante (la que aparece al hacer scroll a veces o fija)
+        if (tHeadSummary) {
+            tHeadSummary.style.display = 'table-row';
+            tHeadSummary.cells[0].innerHTML = htmlContenido;
+        }
+
+        // Alerta azul en la vista de Detalles
+        if (alertDetalles) {
+            // Versión simplificada para la alerta de detalles
+            alertDetalles.innerHTML = `
+                <strong>Resumen:</strong> Máquinas ( <b>${totalRegistros}</b> ) | 
+                Filtros ( <b>${contadorCategorias}</b> ): ${textoDetalle}
+            `;
+        }
     }
     
     function abrirVistaDetalles(isRefresh = false) {
