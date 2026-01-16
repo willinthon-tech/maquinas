@@ -192,8 +192,12 @@
             document.getElementById('view-login').style.display = 'none';
             document.getElementById('view-app').style.display = 'flex';
             actualizarInterfazPerfil();
-            cambiarVista('maquina');
-            iniciarRealTime();
+
+            // --- CAMBIO AQUÍ: RESTAURAR VISTA SOLO SI HAY SESIÓN ---
+            const vistaGuardada = localStorage.getItem('ultimaVista') || 'maquina';
+            cambiarVista(vistaGuardada);
+            // -------------------------------------------------------
+
         } else {
             detenerRealTime();
             document.getElementById('view-login').style.display = 'flex';
@@ -231,6 +235,7 @@
     function detenerRealTime() { if(refreshInt) clearInterval(refreshInt); }
 
     async function cargarTabla() {
+        if (!usuarioActual) return; // <--- AGREGA ESTO: Si no hay usuario, no hagas nada.
         const res = await fetch(`${API}/${vista}?userId=${usuarioActual.id}`);
         const data = await res.json();
         allData = Array.isArray(data) ? data : [];
@@ -984,17 +989,7 @@
         navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail', err));
       });
     }
-    // Al iniciar la aplicación (al recargar)
-    document.addEventListener('DOMContentLoaded', () => {
-        // 1. Recuperamos la vista guardada o usamos 'maquinas' por defecto
-        const vistaGuardada = localStorage.getItem('ultimaVista') || 'maquinas';
-        
-        // 2. Aplicamos esa vista
-        cambiarVista(vistaGuardada);
-        
-        // Opcional: Si necesitas cargar datos iniciales generales
-        // cargarDatosGenerales(); 
-    });
+    
     verificarSesion();
 </script>
 </body>
