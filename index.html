@@ -730,74 +730,67 @@
         let textoDetalle = descripciones.length > 0 ? descripciones.join(', ') : "Ninguno";
 
         // --- 2. CÁLCULOS DE PAGINACIÓN ---
-        const totalPages = Math.ceil(totalRegistros / itemsPerPage) || 1; // Mínimo 1 página
+        const totalPages = Math.ceil(totalRegistros / itemsPerPage) || 1; 
         const disablePrev = currentPage === 1 ? 'disabled' : '';
         const disableNext = (currentPage >= totalPages || totalRegistros === 0) ? 'disabled' : '';
         
         const startShow = totalRegistros === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
         const endShow = Math.min(currentPage * itemsPerPage, totalRegistros);
 
-        // --- 3. CONSTRUCCIÓN DEL HTML (3 COLUMNAS FLEX) ---
+        // --- 3. HTML (Flexbox: Grupo Izquierda vs Grupo Derecha) ---
         const htmlContenido = `
-            <div class="d-flex align-items-center w-100 py-1" style="font-size: 0.75rem;">
+            <div class="d-flex align-items-center justify-content-between w-100 py-1" style="font-size: 0.75rem;">
                 
-                <div style="flex: 1; text-align: left;">
-                    <div class="mb-1">
-                        <span class="badge bg-primary me-2" style="font-size: 0.7rem;">Total: ${totalRegistros}</span>
-                        <span class="badge bg-secondary" style="font-size: 0.7rem;">Filtros: ${contadorCategorias}</span>
-                    </div>
-                    <div class="text-muted text-truncate" style="max-width: 400px;" title="${textoDetalle}">
-                        <small>Aplicados: ${textoDetalle}</small>
-                    </div>
-                </div>
-
-                <div style="flex: 1; text-align: center;">
-                    <div class="fw-bold mb-1 text-dark">
-                        ${startShow} - ${endShow} de ${totalRegistros}
-                    </div>
-                    <div class="d-flex justify-content-center align-items-center gap-2">
-                        <span class="text-muted small">(Pág ${currentPage} de ${totalPages})</span>
-                        <div class="btn-group shadow-sm">
-                            <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disablePrev} onclick="cambiarPagina(-1)">
-                                <i class="bi bi-chevron-left"></i>
-                            </button>
-                            <button class="btn btn-secondary btn-sm py-0 px-2" disabled style="font-weight:bold;">
-                                ${currentPage}
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disableNext} onclick="cambiarPagina(1)">
-                                <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="flex: 0 0 auto; text-align: right;">
-                    <button class="btn btn-dark btn-sm shadow-sm" onclick="abrirVistaDetalles()">
-                        <i class="bi bi-list-columns-reverse me-1"></i> Detalles
+                <div class="d-flex align-items-center" style="flex: 1; overflow: hidden; white-space: nowrap;">
+                    
+                    <button class="btn btn-dark btn-sm shadow-sm me-3 flex-shrink-0" onclick="abrirVistaDetalles()">
+                        <i class="bi bi-list-ul"></i> Detalles
                     </button>
+
+                    <div class="text-truncate">
+                        <span class="me-2">Total: (<b>${totalRegistros}</b>)</span>
+                        <span class="me-2 text-muted">|</span>
+                        <span class="me-2">Filtros Totales: (<b>${contadorCategorias}</b>)</span>
+                        <span class="text-muted">Filtros: ${textoDetalle}</span>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center flex-shrink-0 ms-3">
+                    <span class="me-3 fw-bold text-dark">${startShow} - ${endShow} de ${totalRegistros}</span>
+                    
+                    <div class="btn-group shadow-sm">
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disablePrev} onclick="cambiarPagina(-1)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="btn btn-secondary btn-sm py-0 px-2" disabled style="font-weight:bold;">
+                            ${currentPage} / ${totalPages}
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disableNext} onclick="cambiarPagina(1)">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
 
             </div>
         `;
 
-        // --- 4. INYECTAR EN HEADER Y FOOTER ---
+        // --- 4. INYECTAR EN DOM ---
         
-        // Header (Fila superior de la tabla)
+        // Header
         const tHeadSummary = document.getElementById('tHeadSummary');
         if (tHeadSummary) {
-            tHeadSummary.style.display = 'table-row'; // Aseguramos que se vea
-            // Usamos innerHTML en la celda (cells[0]) que tiene el colspan
-            tHeadSummary.cells[0].className = "bg-light border-bottom"; // Un fondito suave
+            tHeadSummary.style.display = 'table-row';
+            tHeadSummary.cells[0].className = "bg-light border-bottom"; 
             tHeadSummary.cells[0].innerHTML = htmlContenido;
         }
 
-        // Footer (Pie de la tabla)
+        // Footer
         const tFoot = document.getElementById('tFoot');
         if (tFoot) {
             tFoot.innerHTML = `<tr><td colspan="16" class="bg-light border-top">${htmlContenido}</td></tr>`;
         }
         
-        // Alerta de detalles (Opcional, la dejamos simple)
+        // Alerta Detalles
         const alertDetalles = document.getElementById('alertFiltrosDetalles');
         if (alertDetalles) alertDetalles.innerHTML = `<strong>Resumen:</strong> Máquinas ( <b>${totalRegistros}</b> ) | Filtros ( <b>${contadorCategorias}</b> ): ${textoDetalle}`;
     }
