@@ -197,6 +197,9 @@
     let targetDelete = { id: null, tabla: null };
     let tempUserId = null; 
     let expandedCards = new Set(); // Guardará los IDs de las tarjetas abiertas
+    // Agrega estas variables al inicio con las otras
+    let currentPage = 1;
+    const itemsPerPage = 50; // Mostraremos 50 máquinas por página (puedes cambiarlo)
 
     const modalParam = new bootstrap.Modal(document.getElementById('modalParam'));
     const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
@@ -435,18 +438,35 @@
     function detenerRealTime() { if(refreshInt) clearInterval(refreshInt); }
 
     async function cargarTabla() {
-        if (!usuarioActual) return; // <--- AGREGA ESTO: Si no hay usuario, no hagas nada.
-        const res = await fetch(`${API}/${vista}?userId=${usuarioActual.id}`);
-        const data = await res.json();
-        allData = Array.isArray(data) ? data : [];
-        if (vista === 'maquina') {
-            // Renderizado inicial limpio
-            renderizarFiltrosMultiselect(); 
-            aplicarFiltros();
-        } else {
-            renderizarTabla(allData);
-        }
+        if (!usuarioActual) return;
+        
+        // 1. MOSTRAR SPINNER DE CARGA
+        const body = document.getElementById('tBody');
+        const cols = (vista === 'maquina') ? 16 : 5; // Ajuste columnas según vista
+        body.innerHTML = `
+            <tr>
+                <td colspan="${cols}" class="text-center p-5">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <h6 class="text-muted fw-bold">Cargando datos...</h6>
+                </td>
+            </tr>`;
 
+        // 2. PEDIR DATOS
+        try {
+            const res = await fetch(`${API}/${vista}?userId=${usuarioActual.id}`);
+            const data = await res.json();
+            allData = Array.isArray(data) ? data : [];
+            
+            if (vista === 'maquina') {
+                // Renderizado inicial limpio
+                renderizarFiltrosMultiselect(); 
+                aplicarFiltros(); 
+            } else {
+                renderizarTabla(allData);
+            }
+        } catch (error) {
+            body.innerHTML = `<tr><td colspan="${cols}" class="text-center text-danger p-4">Error al cargar datos. Verifique su conexión.</td></tr>`;
+        }
     }
 
     function aplicarFiltros() {
@@ -463,6 +483,9 @@
         }
 
         if (vista !== 'maquina') return;
+
+        // RESETEAR PÁGINA (ESTO ES CLAVE)
+        currentPage = 1;
         
         // Usamos la misma lógica "Global" para la tabla
         // Filtramos la data considerando TODOS los filtros activos
@@ -494,13 +517,33 @@
     function renderizarTabla(data) {
         const titles = document.getElementById('tHeadTitles'), body = document.getElementById('tBody');
         const styleAcc = (usuarioActual.nivel == 3) ? 'display:none' : '';
+
+        // --- VALIDACIÓN: SI NO HAY DATOS ---
+        if (data.length === 0) {
+            const cols = (vista === 'maquina') ? 16 : 5;
+            body.innerHTML = `
+                <tr>
+                    <td colspan="${cols}" class="text-center p-4 bg-light text-muted">
+                        <i class="bi bi-inbox fs-4 d-block mb-1"></i>
+                        Sin registros encontrados
+                    </td>
+                </tr>`;
+            // Si es máquina, limpiamos el paginador también
+            if(vista === 'maquina') generarResumenReporte(0);
+            return;
+        }
+
+        // --- LÓGICA VISTA MÁQUINAS (PAGINACIÓN) ---
         if(vista === 'maquina') {
             titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th>Tipo</th><th>Puestos</th><th>Modo</th><th>Legal</th><th class="text-center" style="${styleAcc}">Acciones</th>`;
-            // Dentro de renderizarTabla, en la sección de vista === 'maquina'
-            body.innerHTML = data.map(i => {
-                // Definimos el color del badge: si es N/A es rojo (danger), si no, es oscuro (dark)
-                const badgeColor = (i.serial === 'N/A' || !i.serial) ? 'bg-danger' : 'bg-dark';
+            
+            // CÁLCULO DE PAGINACIÓN
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageData = data.slice(start, end); // <--- AQUÍ ESTÁ EL TRUCO DE RENDIMIENTO
 
+            body.innerHTML = pageData.map(i => {
+                const badgeColor = (i.serial === 'N/A' || !i.serial) ? 'bg-danger' : 'bg-dark';
                 return `
                     <tr>
                         <td>${i.id}</td>
@@ -524,19 +567,20 @@
                         </td>
                     </tr>`;
             }).join('');
+
+        // --- OTRAS VISTAS (SIN PAGINACIÓN NECESARIA POR AHORA) ---
         } else if (vista === 'sucursal' || vista === 'modelo') {
             const padre = (vista === 'sucursal') ? 'Grupo' : 'Marca';
             const nomPadre = (vista === 'sucursal') ? 'grupo_nom' : 'marca_nom';
             titles.innerHTML = `<th>ID</th><th>Nombre</th><th>${padre}</th><th class="text-center">Acciones</th>`;
             body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td>${i.nombre}</td><td><span class="badge bg-light text-dark border">${i[nomPadre] || '-'}</span></td><td class="text-center"><button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, '${vista}')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
+        
         } else if (vista === 'usuario') {
             titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Usuario</th><th>Nivel</th><th class="text-center">Acciones</th>`;
             body.innerHTML = data.map(i => { 
                 const l = {1:'Admin', 2:'Supervisor', 3:'Normal'}; 
                 return `<tr>
-                    <td>${i.id}</td>
-                    <td>${i.nombre}</td>
-                    <td>${i.usuario}</td>
+                    <td>${i.id}</td><td>${i.nombre}</td><td>${i.usuario}</td>
                     <td><span class="badge bg-info text-dark">${l[i.nivel]}</span></td>
                     <td class="text-center">
                         <button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button>
@@ -545,6 +589,7 @@
                     </td>
                 </tr>`; 
             }).join('');
+        
         } else {
             titles.innerHTML = `<th>ID</th><th>Nombre</th><th class="text-center">Acciones</th>`;
             body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td>${i.nombre}</td><td class="text-center"><button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, '${vista}')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
@@ -665,78 +710,75 @@
     function generarResumenReporte(totalRegistros) {
         if (vista !== 'maquina') return;
 
+        // --- LÓGICA DE TEXTO DE FILTROS (Igual que antes) ---
         let descripciones = [];
-        let contadorCategorias = 0; // Contará cuántos tipos de filtros se usaron (ej: Nombre + Sala = 2)
-
-        // 1. Revisar Filtros de Texto
+        let contadorCategorias = 0;
         const fNombre = document.getElementById('f-nombre')?.value || "";
         const fSerial = document.getElementById('f-serial')?.value || "";
 
-        if (fNombre) {
-            descripciones.push(`Nombre: [ "${fNombre}" ]`);
-            contadorCategorias++;
-        }
-        if (fSerial) {
-            descripciones.push(`Serial: [ "${fSerial}" ]`);
-            contadorCategorias++;
-        }
+        if (fNombre) { descripciones.push(`Nombre: [ "${fNombre}" ]`); contadorCategorias++; }
+        if (fSerial) { descripciones.push(`Serial: [ "${fSerial}" ]`); contadorCategorias++; }
 
-        // 2. Revisar Filtros de Selección (Multiselect)
-        // Recorremos la configuración para usar la etiqueta bonita ("Sala" en vez de "sucursal")
         configFiltros.forEach(conf => {
             const seleccionados = estadoFiltros[conf.id];
-            
             if (seleccionados && seleccionados.length > 0) {
                 contadorCategorias++;
-                // Aquí unimos los valores con coma: [ Sala 1, Sala 2 ]
-                const listaValores = seleccionados.join(', ');
-                // Agregamos al array de descripciones con formato negrita para el título
-                descripciones.push(`<b>${conf.label}</b>: [ ${listaValores} ]`);
+                descripciones.push(`<b>${conf.label}</b>: [ ${seleccionados.join(', ')} ]`);
             }
         });
 
-        // 3. Construir el texto final
-        let textoDetalle = "Ninguno";
-        if (descripciones.length > 0) {
-            textoDetalle = descripciones.join(', '); // Une las categorías con coma
-        }
+        let textoDetalle = descripciones.length > 0 ? descripciones.join(', ') : "Ninguno";
 
-        // 4. HTML para el pie de tabla y la vista de detalles
+        // --- LÓGICA DE PAGINACIÓN (NUEVO) ---
+        const totalPages = Math.ceil(totalRegistros / itemsPerPage);
+        const disablePrev = currentPage === 1 ? 'disabled' : '';
+        const disableNext = (currentPage === totalPages || totalRegistros === 0) ? 'disabled' : '';
+        
+        // Mostrando "1 - 50 de 2000"
+        const startShow = totalRegistros === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+        const endShow = Math.min(currentPage * itemsPerPage, totalRegistros);
+
         const htmlContenido = `
             <div class="d-flex align-items-center justify-content-between w-100" style="font-size: 0.75rem;">
-                <div>
-                    <span class="me-3">Máquinas totales ( <b>${totalRegistros}</b> )</span>
-                    <span class="me-3">Filtros totales ( <b>${contadorCategorias}</b> )</span>
-                    <span>Filtros aplicados: ( ${textoDetalle} )</span>
+                <div style="max-width: 60%;">
+                    <span class="me-2">Máquinas (<b>${totalRegistros}</b>)</span>
+                    <span class="me-2 text-muted">|</span>
+                    <span class="me-2">Filtros (<b>${contadorCategorias}</b>): ${textoDetalle}</span>
                 </div>
+
                 <div>
                     <button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles</button>
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <span class="me-2 text-muted">${startShow}-${endShow} de ${totalRegistros}</span>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disablePrev} onclick="cambiarPagina(-1)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" disabled style="color:#000; font-weight:bold; background:#eee;">
+                            ${currentPage}
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disableNext} onclick="cambiarPagina(1)">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
 
-        // 5. Inyectar en el DOM (Footer de tabla y Cabecera flotante)
         const tFoot = document.getElementById('tFoot');
-        const tHeadSummary = document.getElementById('tHeadSummary');
-        const alertDetalles = document.getElementById('alertFiltrosDetalles');
-
-        // Pie de tabla
         if (tFoot) tFoot.innerHTML = `<tr><td colspan="16" class="p-2 bg-light border-top">${htmlContenido}</td></tr>`;
+        
+        // (Opcional) Actualizar también los otros elementos si los usas
+        const alertDetalles = document.getElementById('alertFiltrosDetalles');
+        if (alertDetalles) alertDetalles.innerHTML = `<strong>Resumen:</strong> Máquinas ( <b>${totalRegistros}</b> ) | Filtros ( <b>${contadorCategorias}</b> ): ${textoDetalle}`;
+    }
 
-        // Cabecera flotante (la que aparece al hacer scroll a veces o fija)
-        if (tHeadSummary) {
-            tHeadSummary.style.display = 'table-row';
-            tHeadSummary.cells[0].innerHTML = htmlContenido;
-        }
-
-        // Alerta azul en la vista de Detalles
-        if (alertDetalles) {
-            // Versión simplificada para la alerta de detalles
-            alertDetalles.innerHTML = `
-                <strong>Resumen:</strong> Máquinas ( <b>${totalRegistros}</b> ) | 
-                Filtros ( <b>${contadorCategorias}</b> ): ${textoDetalle}
-            `;
-        }
+    function cambiarPagina(delta) {
+        currentPage += delta;
+        renderizarTabla(currentFiltered); // Redibujamos usando la data YA filtrada
+        generarResumenReporte(currentFiltered.length); // Actualizamos botones
     }
     
     function abrirVistaDetalles(isRefresh = false) {
