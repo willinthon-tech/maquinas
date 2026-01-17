@@ -14,7 +14,7 @@ app.get('/', (req, res) => {
 });
 
 // CONFIGURACIÓN DE BASE DE DATOS
-const db = mysql.createConnection({
+/* const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',      
     password: '$0p0rt3R0y',      
@@ -24,7 +24,29 @@ const db = mysql.createConnection({
 db.connect((err) => {
     if (err) console.error('Error BD:', err);
     else console.log('Conectado exitosamente a MySQL en Localhost');
+}); */
+
+// CONFIGURACIÓN DE BASE DE DATOS (CON POOL DE CONEXIONES)
+const db = mysql.createPool({
+    host: 'localhost',
+    user: 'root',      
+    password: '$0p0rt3R0y',      
+    database: 'sistema_maquinas',
+    waitForConnections: true,
+    connectionLimit: 10, // Mantiene hasta 10 conexiones abiertas listas para usar
+    queueLimit: 0
 });
+
+// Prueba opcional para verificar que conecta al iniciar
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('Error conectando a la BD:', err.code);
+    } else {
+        console.log('Conectado exitosamente a MySQL (Pool activo)');
+        connection.release(); // Siempre liberar la conexión de prueba
+    }
+});
+
 
 // --- FUNCIONES DE AYUDA (Helpers) ---
 
