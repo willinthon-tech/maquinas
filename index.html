@@ -574,7 +574,7 @@
             const padre = (vista === 'sucursal') ? 'Grupo' : 'Marca';
             const nomPadre = (vista === 'sucursal') ? 'grupo_nom' : 'marca_nom';
             titles.innerHTML = `<th>ID</th><th>Nombre</th><th>${padre}</th><th class="text-center">Acciones</th>`;
-            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td>${i.nombre}</td><td><span class="badge bg-light text-dark border">${i[nomPadre] || '-'}</span></td><td class="text-center"><button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, '${vista}')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
+            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td>${i.nombre}</td><td><span class="badge bg-light text-dark border">${i[nomPadre] || '-'}</span></td><td class="text-center"><div class="d-flex justify-content-center gap-1"><button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, '${vista}')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></div></tr>`).join('');
         
         } else if (vista === 'usuario') {
             titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Usuario</th><th>Nivel</th><th class="text-center">Acciones</th>`;
@@ -584,16 +584,19 @@
                     <td>${i.id}</td><td>${i.nombre}</td><td>${i.usuario}</td>
                     <td><span class="badge bg-info text-dark">${l[i.nivel]}</span></td>
                     <td class="text-center">
-                        <button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button>
-                        <button onclick="abrirModalSucursales(${i.id})" class="btn btn-outline-warning btn-action ms-1">Sucursales</button>
-                        ${(i.usuario === 'willinthon') ? '<button class="btn btn-outline-secondary btn-action ms-1" disabled>Lock</button>' : `<button onclick="solicitarEliminar(${i.id}, 'usuario')" class="btn btn-outline-danger btn-action ms-1">Borrar</button>`}
+                        <div class="d-flex justify-content-center gap-1">
+                            <button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button>
+                            <button onclick="abrirModalSucursales(${i.id})" class="btn btn-outline-warning btn-action ms-1">Sucursales</button>
+                            ${(i.usuario === 'willinthon') ? '<button class="btn btn-outline-secondary btn-action ms-1" disabled>Lock</button>' : `<button onclick="solicitarEliminar(${i.id}, 'usuario')" class="btn btn-outline-danger btn-action ms-1">Borrar</button>`}
+                        </div>
                     </td>
                 </tr>`; 
             }).join('');
         
         } else {
             titles.innerHTML = `<th>ID</th><th>Nombre</th><th class="text-center">Acciones</th>`;
-            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td>${i.nombre}</td><td class="text-center"><button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> <button onclick="solicitarEliminar(${i.id}, '${vista}')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></tr>`).join('');
+            body.innerHTML = data.map(i => `<tr><td>${i.id}</td><td>${i.nombre}</td><td class="text-center">
+                <div class="d-flex justify-content-center gap-1"><button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">Editar</button><button onclick="solicitarEliminar(${i.id}, '${vista}')" class="btn btn-outline-danger btn-action ms-1">Borrar</button></td></div></tr>`).join('');
         }
     }
 
@@ -1103,7 +1106,7 @@
     document.getElementById('formMaquinaFull').onsubmit = async (e) => { e.preventDefault(); await fetch(editId ? `${API}/maquina/${editId}` : `${API}/maquina`, { method: editId ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(e.target))) }); cancelarFormulario(); cargarTabla(); };
 
     function solicitarEliminar(id, tabla) { targetDelete = { id, tabla }; modalConfirm.show(); }
-    
+
     document.getElementById('btnConfirmarAccion').onclick = async () => {
         const res = await fetch(`${API}/${targetDelete.tabla}/${targetDelete.id}`, { method: 'DELETE' });
         modalConfirm.hide();
