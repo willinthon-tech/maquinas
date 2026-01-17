@@ -940,143 +940,182 @@
     }
 
     async function abrirModalParametro(id = null) {
-        editId = id; const container = document.getElementById('modalFields');
-        let current = id ? await (await fetch(`${API}/${vista}/${id}`)).json() : {};
-        let html = '';
-        if (vista === 'usuario') {
-            const isW = (current.usuario === 'willinthon');
-            html = `<div class="mb-2"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div>
-                    <div class="mb-2"><label class="filter-label">Usuario</label><input type="text" name="usuario" class="form-control" value="${current.usuario || ''}" required ${isW ? 'disabled' : ''}></div>
-                    <div class="mb-2"><label class="filter-label">Clave</label><input type="password" name="clave" class="form-control" value="${current.clave || ''}" required></div>
-                    <div class="mb-2"><label class="filter-label">Nivel</label><select name="nivel" class="form-select" ${isW ? 'disabled' : ''}><option value="1" ${current.nivel==1?'selected':''}>Admin</option><option value="2" ${current.nivel==2?'selected':''}>Supervisor</option><option value="3" ${current.nivel==3?'selected':''}>Normal</option></select></div>
-                    ${isW ? '<input type="hidden" name="usuario" value="willinthon"><input type="hidden" name="nivel" value="1">' : ''}`;
-        } else {
-            const d = {'sucursal':[{l:'Grupo',t:'grupo',f:'grupo_id'}],'modelo':[{l:'Marca',t:'marca',f:'marca_id'}]};
-            html = `<div class="mb-3"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div>`;
-            if (d[vista]) { for (let x of d[vista]) { const o = await (await fetch(`${API}/options/${x.t}?userId=${usuarioActual.id}`)).json(); html += `<div class="mb-3"><label class="filter-label">${x.l}</label><select name="${x.f}" class="form-select" required><option value="">--</option>${o.map(opt => `<option value="${opt.id}" ${current[x.f] == opt.id ? 'selected' : ''}>${opt.nombre}</option>`).join('')}</select></div>`; } }
+        editId = id; 
+        const container = document.getElementById('modalFields');
+        
+        // 1. LIMPIEZA INMEDIATA (Spinner)
+        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div><div class="small mt-2">Cargando...</div></div>';
+        modalParam.show(); 
+
+        try {
+            let current = id ? await (await fetch(`${API}/${vista}/${id}`)).json() : {};
+            let html = '';
+            
+            if (vista === 'usuario') {
+                const isW = (current.usuario === 'willinthon');
+                html = `<div class="mb-2"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div>
+                        <div class="mb-2"><label class="filter-label">Usuario</label><input type="text" name="usuario" class="form-control" value="${current.usuario || ''}" required ${isW ? 'disabled' : ''}></div>
+                        <div class="mb-2"><label class="filter-label">Clave</label><input type="password" name="clave" class="form-control" value="${current.clave || ''}" required></div>
+                        <div class="mb-2"><label class="filter-label">Nivel</label><select name="nivel" class="form-select" ${isW ? 'disabled' : ''}><option value="1" ${current.nivel==1?'selected':''}>Admin</option><option value="2" ${current.nivel==2?'selected':''}>Supervisor</option><option value="3" ${current.nivel==3?'selected':''}>Normal</option></select></div>
+                        ${isW ? '<input type="hidden" name="usuario" value="willinthon"><input type="hidden" name="nivel" value="1">' : ''}`;
+            } else {
+                const d = {'sucursal':[{l:'Grupo',t:'grupo',f:'grupo_id'}],'modelo':[{l:'Marca',t:'marca',f:'marca_id'}]};
+                html = `<div class="mb-3"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div>`;
+                
+                if (d[vista]) { 
+                    for (let x of d[vista]) { 
+                        // Pedimos data fresca
+                        const res = await fetch(`${API}/options/${x.t}?userId=${usuarioActual.id}`);
+                        const o = await res.json();
+                        html += `<div class="mb-3"><label class="filter-label">${x.l}</label><select name="${x.f}" class="form-select" required><option value="">--</option>${o.map(opt => `<option value="${opt.id}" ${current[x.f] == opt.id ? 'selected' : ''}>${opt.nombre}</option>`).join('')}</select></div>`; 
+                    } 
+                }
+            }
+            
+            container.innerHTML = html; 
+            if(vista === 'usuario') { activarValidacionEnInput('input[name="usuario"]', 'usuario', 'usuario', 'btnGuardarParam', id); }
+            
+        } catch(e) {
+            container.innerHTML = '<p class="text-danger text-center">Error al cargar datos.</p>';
         }
-        container.innerHTML = html; 
-        if(vista === 'usuario') { activarValidacionEnInput('input[name="usuario"]', 'usuario', 'usuario', 'btnGuardarParam', id); }
-        modalParam.show();
-    }
+    }   
     
     async function abrirEditorMaquina(id = null) {
         editId = id; 
         document.getElementById('section-lista').style.display = 'none'; 
         document.getElementById('section-formulario').style.display = 'block';
+        
         const container = document.getElementById('camposMaquina');
 
-        // Cambiamos {} por { puestos: 1 } para que las máquinas nuevas tengan valor inicial
-        let current = id ? await (await fetch(`${API}/maquina/${id}`)).json() : { puestos: 1 };
-
-        // 1. Iniciamos el HTML con los 3 campos de texto/número (Nombre, Serial, Puestos)
-        // Usamos col-md-4 para que los tres queden en una sola fila arriba
-        let html = `
-            <div class="col-md-4 mb-2">
-                <label class="filter-label">Nombre</label>
-                <input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required>
-            </div>
-            <div class="col-md-4 mb-2">
-                <label class="filter-label">Serial</label>
-                <input type="text" name="serial" class="form-control" value="${current.serial || ''}" placeholder="Dejar vacío para N/A">
-            </div>
-            <div class="col-md-4 mb-2">
-                <label class="filter-label">Puestos</label>
-                <input type="number" id="inputPuestos" name="puestos" class="form-control" value="${current.puestos || 1}" min="1" required>
+        // 1. LIMPIEZA TOTAL E INMEDIATA
+        // Esto evita el "efecto fantasma" de ver datos viejos.
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <h6 class="text-muted fw-bold mt-2">Cargando datos frescos...</h6>
             </div>`;
 
-        // 2. Mantenemos tu arreglo original de configuración para los selectores
-        const dMaq = [
-            { label: 'Sala / Grupo', table: 'sucursal', fk: 'sucursal_id', grouped: true }, 
-            { label: 'Marca / Modelo', table: 'modelo', fk: 'modelo_id', grouped: true }, 
-            { label: 'Juego', table: 'juego', fk: 'juego_id' }, 
-            { label: 'Estado', table: 'estado', fk: 'estado_id' }, 
-            { label: 'Sociedad', table: 'sociedad', fk: 'sociedad_id' }, 
-            { label: 'Valor', table: 'valor', fk: 'valor_id' },
-            { label: 'Tipo', table: 'tipo', fk: 'tipo_id' },
-            { label: 'Modo', table: 'modo', fk: 'modo_id' },
-            { label: 'Legal', table: 'legal', fk: 'legal_id' },
-        ];
+        try {
+            // 2. Cargar datos del registro (si es edición)
+            let current = { puestos: 1 };
+            if (id) {
+                const res = await fetch(`${API}/maquina/${id}`);
+                current = await res.json();
+            }
 
-        // 3. Ejecutamos el ciclo para construir los selectores dinámicamente
-        for (let d of dMaq) {
-            const opts = await (await fetch(`${API}/options/${d.table}?userId=${usuarioActual.id}`)).json();
-            html += `<div class="col-md-4 mb-2"><label class="filter-label">${d.label}</label><select name="${d.fk}" class="form-select" required><option value="">--</option>`;
-            
-            if (d.grouped) { 
-                const g = {}; 
-                opts.forEach(o => { 
-                    const p = o.parent_nom || 'Otros'; 
-                    if (!g[p]) g[p] = []; 
-                    g[p].push(o); 
-                }); 
-                for (const p in g) { 
-                    html += `<optgroup label="${p.toUpperCase()}">`; 
-                    g[p].forEach(o => { 
-                        html += `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`; 
-                    }); 
-                    html += `</optgroup>`; 
-                }
-            } else { 
-                html += opts.map(o => `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`).join(''); 
-            } 
-            html += `</select></div>`;
-        }
+            // 3. Construcción del HTML inicial
+            let html = `
+                <div class="col-md-4 mb-2">
+                    <label class="filter-label">Nombre</label>
+                    <input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <label class="filter-label">Serial</label>
+                    <input type="text" name="serial" class="form-control" value="${current.serial || ''}" placeholder="Dejar vacío para N/A">
+                </div>
+                <div class="col-md-4 mb-2">
+                    <label class="filter-label">Puestos</label>
+                    <input type="number" id="inputPuestos" name="puestos" class="form-control" value="${current.puestos || 1}" min="1" required>
+                </div>`;
 
-        // 4. Inyectamos todo el HTML generado en el contenedor
-        container.innerHTML = html;
+            const dMaq = [
+                { label: 'Sala / Grupo', table: 'sucursal', fk: 'sucursal_id', grouped: true }, 
+                { label: 'Marca / Modelo', table: 'modelo', fk: 'modelo_id', grouped: true }, 
+                { label: 'Juego', table: 'juego', fk: 'juego_id' }, 
+                { label: 'Estado', table: 'estado', fk: 'estado_id' }, 
+                { label: 'Sociedad', table: 'sociedad', fk: 'sociedad_id' }, 
+                { label: 'Valor', table: 'valor', fk: 'valor_id' },
+                { label: 'Tipo', table: 'tipo', fk: 'tipo_id' },
+                { label: 'Modo', table: 'modo', fk: 'modo_id' },
+                { label: 'Legal', table: 'legal', fk: 'legal_id' },
+            ];
 
-        // 5. LÓGICA DE VALIDACIÓN DINÁMICA
-        const selectTipo = document.querySelector('select[name="tipo_id"]');
-        const inputPuestos = document.getElementById('inputPuestos');
-
-        if (selectTipo && inputPuestos) {
-            // Función para aplicar la regla
-            const aplicarReglaPuestos = () => {
-                const textoTipo = selectTipo.options[selectTipo.selectedIndex].text.toUpperCase();
+            // 4. Ciclo de Carga (Sin Caché, siempre fresco)
+            for (let d of dMaq) {
+                // Pedimos la lista al servidor CADA VEZ que entramos
+                const res = await fetch(`${API}/options/${d.table}?userId=${usuarioActual.id}`);
+                const opts = await res.json();
                 
-                if (textoTipo === "NORMAL") {
-                    inputPuestos.value = 1;
-                    inputPuestos.min = 1;
-                    inputPuestos.readOnly = true; // Lo bloqueamos
-                    inputPuestos.classList.add('bg-light'); // Color gris de deshabilitado
-                } else if (textoTipo === "MULTIPUESTO") {
-                    inputPuestos.readOnly = false;
-                    inputPuestos.min = 2;
-                    inputPuestos.classList.remove('bg-light');
-                    // Si el valor actual es 1 y cambiaron a multipuesto, subimos a 2
-                    if (parseInt(inputPuestos.value) < 2) {
-                        inputPuestos.value = 2;
+                html += `<div class="col-md-4 mb-2"><label class="filter-label">${d.label}</label><select name="${d.fk}" class="form-select" required><option value="">--</option>`;
+                
+                if (d.grouped) { 
+                    const g = {}; 
+                    opts.forEach(o => { 
+                        const p = o.parent_nom || 'Otros'; 
+                        if (!g[p]) g[p] = []; 
+                        g[p].push(o); 
+                    }); 
+                    for (const p in g) { 
+                        html += `<optgroup label="${p.toUpperCase()}">`; 
+                        g[p].forEach(o => { 
+                            html += `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`; 
+                        }); 
+                        html += `</optgroup>`; 
                     }
-                } else {
-                    // Para otros tipos que no sean ninguno de los dos
-                    inputPuestos.readOnly = false;
-                    inputPuestos.min = 1;
-                    inputPuestos.classList.remove('bg-light');
-                }
-            };
+                } else { 
+                    html += opts.map(o => `<option value="${o.id}" ${current[d.fk] == o.id ? 'selected' : ''}>${o.nombre}</option>`).join(''); 
+                } 
+                html += `</select></div>`;
+            }
 
-            // Escuchar el cambio
-            selectTipo.addEventListener('change', aplicarReglaPuestos);
-            
-            // Ejecutar una vez al abrir (por si es Edición)
-            setTimeout(aplicarReglaPuestos, 500); // Pequeño delay para asegurar que los options cargaron
+            // 5. Inyectar HTML final
+            container.innerHTML = html;
+
+            // 6. Re-aplicar lógicas (Puestos y Validación)
+            const selectTipo = document.querySelector('select[name="tipo_id"]');
+            const inputPuestos = document.getElementById('inputPuestos');
+
+            if (selectTipo && inputPuestos) {
+                const aplicarReglaPuestos = () => {
+                    const textoTipo = selectTipo.options[selectTipo.selectedIndex]?.text.toUpperCase() || "";
+                    if (textoTipo === "NORMAL") {
+                        inputPuestos.value = 1; inputPuestos.min = 1; inputPuestos.readOnly = true; inputPuestos.classList.add('bg-light');
+                    } else if (textoTipo === "MULTIPUESTO") {
+                        inputPuestos.readOnly = false; inputPuestos.min = 2; inputPuestos.classList.remove('bg-light');
+                        if (parseInt(inputPuestos.value) < 2) inputPuestos.value = 2;
+                    } else {
+                        inputPuestos.readOnly = false; inputPuestos.min = 1; inputPuestos.classList.remove('bg-light');
+                    }
+                };
+                selectTipo.addEventListener('change', aplicarReglaPuestos);
+                setTimeout(aplicarReglaPuestos, 100); 
+            }
+
+            activarValidacionEnInput('input[name="serial"]', 'maquina', 'serial', 'btnGuardarMaquina', id);
+
+        } catch (err) {
+            container.innerHTML = `<div class="text-danger p-3 text-center">Error al conectar con el servidor. Intente de nuevo.</div>`;
+            console.error(err);
         }
-
-        // 6. Activamos la validación de serial (recuerda aplicar la excepción para N/A que te pasé antes)
-        activarValidacionEnInput('input[name="serial"]', 'maquina', 'serial', 'btnGuardarMaquina', id);
     }
     
     document.getElementById('formLogin').onsubmit = async (e) => { e.preventDefault(); try { const res = await fetch(`${API}/login`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ usuario: document.getElementById('log-user').value, clave: document.getElementById('log-pass').value }) }); const data = await res.json(); if (data.success) { localStorage.setItem('usuarioInventario', JSON.stringify(data.user)); verificarSesion(); } else { const err = document.getElementById('loginError'); err.innerText = data.message; err.style.display = 'block'; } } catch(e) { alert("Error de conexión"); } };
-    document.getElementById('formParam').onsubmit = async (e) => { e.preventDefault(); await fetch(editId ? `${API}/${vista}/${editId}` : `${API}/${vista}`, { method: editId ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(e.target))) }); modalParam.hide(); cargarTabla(); };
+    document.getElementById('formParam').onsubmit = async (e) => { 
+        e.preventDefault(); 
+        await fetch(editId ? `${API}/${vista}/${editId}` : `${API}/${vista}`, { 
+            method: editId ? 'PUT' : 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(Object.fromEntries(new FormData(e.target))) 
+        }); 
+        modalParam.hide(); 
+        cargarTabla(); 
+    };
     document.getElementById('formMaquinaFull').onsubmit = async (e) => { e.preventDefault(); await fetch(editId ? `${API}/maquina/${editId}` : `${API}/maquina`, { method: editId ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(e.target))) }); cancelarFormulario(); cargarTabla(); };
 
     function solicitarEliminar(id, tabla) { targetDelete = { id, tabla }; modalConfirm.show(); }
+    
     document.getElementById('btnConfirmarAccion').onclick = async () => {
         const res = await fetch(`${API}/${targetDelete.tabla}/${targetDelete.id}`, { method: 'DELETE' });
         modalConfirm.hide();
-        if (res.status === 409) { const data = await res.json(); document.getElementById('msgErrorRelacion').innerText = data.message; setTimeout(() => modalError.show(), 300); } else if (res.ok) { cargarTabla(); }
+        if (res.status === 409) { 
+            const data = await res.json(); 
+            document.getElementById('msgErrorRelacion').innerText = data.message; 
+            setTimeout(() => modalError.show(), 300); 
+        } else if (res.ok) { 
+            cargarTabla(); 
+        }
     };
+
 
     function cerrarSesion() { 
         // BORRAR LA VISTA GUARDADA
