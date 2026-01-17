@@ -200,7 +200,7 @@
     let expandedCards = new Set(); // Guardará los IDs de las tarjetas abiertas
     // Agrega estas variables al inicio con las otras
     let currentPage = 1;
-    const itemsPerPage = 50; // Mostraremos 50 máquinas por página (puedes cambiarlo)
+    let itemsPerPage = 10; // Ahora es variable (let) y empieza en 10
 
     const modalParam = new bootstrap.Modal(document.getElementById('modalParam'));
     const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
@@ -736,18 +736,17 @@
         const disableNext = (currentPage >= totalPages || totalRegistros === 0) ? 'disabled' : '';
         
         const startShow = totalRegistros === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+        // Si itemsPerPage es gigante (Todas), endShow no debe superar el total
         const endShow = Math.min(currentPage * itemsPerPage, totalRegistros);
 
-        // --- 3. HTML (Flexbox: Grupo Izquierda vs Grupo Derecha) ---
+        // --- 3. HTML (Con Selector de Filas) ---
         const htmlContenido = `
             <div class="d-flex align-items-center justify-content-between w-100 py-1" style="font-size: 0.75rem;">
                 
                 <div class="d-flex align-items-center" style="flex: 1; overflow: hidden; white-space: nowrap;">
-                    
                     <button class="btn btn-dark btn-sm shadow-sm me-3 flex-shrink-0" onclick="abrirVistaDetalles()">
-                        <i class="bi bi-list-ul"></i> Detalles
+                        Detalles
                     </button>
-
                     <div class="text-truncate">
                         <span class="me-2">Total: (<b>${totalRegistros}</b>)</span>
                         <span class="me-2 text-muted">|</span>
@@ -756,18 +755,28 @@
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center flex-shrink-0 ms-3">
-                    <span class="me-3 fw-bold text-dark">${startShow} - ${endShow} de ${totalRegistros}</span>
+                <div class="d-flex align-items-center flex-shrink-0 ms-3 gap-2">
+                    
+                    <select class="form-select form-select-sm py-0 shadow-sm text-muted fw-bold bg-light" 
+                            style="width:auto; font-size:0.75rem; border-color:#dee2e6; cursor:pointer;" 
+                            onchange="cambiarItemsPorPagina(this.value)">
+                        <option value="10" ${itemsPerPage === 10 ? 'selected' : ''}>10 filas</option>
+                        <option value="50" ${itemsPerPage === 50 ? 'selected' : ''}>50 filas</option>
+                        <option value="100" ${itemsPerPage === 100 ? 'selected' : ''}>100 filas</option>
+                        <option value="999999" ${itemsPerPage > 100 ? 'selected' : ''}>Todas</option>
+                    </select>
+
+                    <span class="fw-bold text-dark mx-1">${startShow} - ${endShow} de ${totalRegistros}</span>
                     
                     <div class="btn-group shadow-sm">
-                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disablePrev} onclick="cambiarPagina(-1)">
-                            <i class="bi bi-chevron-left"></i>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2 fw-bold" ${disablePrev} onclick="cambiarPagina(-1)">
+                            &lt;
                         </button>
                         <button class="btn btn-secondary btn-sm py-0 px-2" disabled style="font-weight:bold;">
                             ${currentPage} / ${totalPages}
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disableNext} onclick="cambiarPagina(1)">
-                            <i class="bi bi-chevron-right"></i>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2 fw-bold" ${disableNext} onclick="cambiarPagina(1)">
+                            &gt;
                         </button>
                     </div>
                 </div>
@@ -776,8 +785,6 @@
         `;
 
         // --- 4. INYECTAR EN DOM ---
-        
-        // Header
         const tHeadSummary = document.getElementById('tHeadSummary');
         if (tHeadSummary) {
             tHeadSummary.style.display = 'table-row';
@@ -785,13 +792,11 @@
             tHeadSummary.cells[0].innerHTML = htmlContenido;
         }
 
-        // Footer
         const tFoot = document.getElementById('tFoot');
         if (tFoot) {
             tFoot.innerHTML = `<tr><td colspan="16" class="bg-light border-top">${htmlContenido}</td></tr>`;
         }
         
-        // Alerta Detalles
         const alertDetalles = document.getElementById('alertFiltrosDetalles');
         if (alertDetalles) alertDetalles.innerHTML = `<strong>Resumen:</strong> Máquinas ( <b>${totalRegistros}</b> ) | Filtros ( <b>${contadorCategorias}</b> ): ${textoDetalle}`;
     }
@@ -800,6 +805,13 @@
         currentPage += delta;
         renderizarTabla(currentFiltered); // Redibujamos usando la data YA filtrada
         generarResumenReporte(currentFiltered.length); // Actualizamos botones
+    }
+
+    function cambiarItemsPorPagina(valor) {
+        itemsPerPage = parseInt(valor);
+        currentPage = 1; // Siempre reiniciamos a la página 1 para evitar errores
+        renderizarTabla(currentFiltered);
+        generarResumenReporte(currentFiltered.length);
     }
     
     function abrirVistaDetalles(isRefresh = false) {
