@@ -710,7 +710,7 @@
     function generarResumenReporte(totalRegistros) {
         if (vista !== 'maquina') return;
 
-        // --- LÓGICA DE TEXTO DE FILTROS (Igual que antes) ---
+        // --- 1. PREPARAR TEXTO DE FILTROS ---
         let descripciones = [];
         let contadorCategorias = 0;
         const fNombre = document.getElementById('f-nombre')?.value || "";
@@ -729,48 +729,75 @@
 
         let textoDetalle = descripciones.length > 0 ? descripciones.join(', ') : "Ninguno";
 
-        // --- LÓGICA DE PAGINACIÓN (NUEVO) ---
-        const totalPages = Math.ceil(totalRegistros / itemsPerPage);
+        // --- 2. CÁLCULOS DE PAGINACIÓN ---
+        const totalPages = Math.ceil(totalRegistros / itemsPerPage) || 1; // Mínimo 1 página
         const disablePrev = currentPage === 1 ? 'disabled' : '';
-        const disableNext = (currentPage === totalPages || totalRegistros === 0) ? 'disabled' : '';
+        const disableNext = (currentPage >= totalPages || totalRegistros === 0) ? 'disabled' : '';
         
-        // Mostrando "1 - 50 de 2000"
         const startShow = totalRegistros === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
         const endShow = Math.min(currentPage * itemsPerPage, totalRegistros);
 
+        // --- 3. CONSTRUCCIÓN DEL HTML (3 COLUMNAS FLEX) ---
         const htmlContenido = `
-            <div class="d-flex align-items-center justify-content-between w-100" style="font-size: 0.75rem;">
-                <div style="max-width: 60%;">
-                    <span class="me-2">Máquinas (<b>${totalRegistros}</b>)</span>
-                    <span class="me-2 text-muted">|</span>
-                    <span class="me-2">Filtros (<b>${contadorCategorias}</b>): ${textoDetalle}</span>
-                </div>
-
-                <div>
-                    <button class="btn btn-dark btn-action" onclick="abrirVistaDetalles()">Detalles</button>
-                </div>
-
-                <div class="d-flex align-items-center">
-                    <span class="me-2 text-muted">${startShow}-${endShow} de ${totalRegistros}</span>
-                    <div class="btn-group">
-                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disablePrev} onclick="cambiarPagina(-1)">
-                            <i class="bi bi-chevron-left"></i>
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" disabled style="color:#000; font-weight:bold; background:#eee;">
-                            ${currentPage}
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disableNext} onclick="cambiarPagina(1)">
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
+            <div class="d-flex align-items-center w-100 py-1" style="font-size: 0.75rem;">
+                
+                <div style="flex: 1; text-align: left;">
+                    <div class="mb-1">
+                        <span class="badge bg-primary me-2" style="font-size: 0.7rem;">Total: ${totalRegistros}</span>
+                        <span class="badge bg-secondary" style="font-size: 0.7rem;">Filtros: ${contadorCategorias}</span>
+                    </div>
+                    <div class="text-muted text-truncate" style="max-width: 400px;" title="${textoDetalle}">
+                        <small>Aplicados: ${textoDetalle}</small>
                     </div>
                 </div>
+
+                <div style="flex: 1; text-align: center;">
+                    <div class="fw-bold mb-1 text-dark">
+                        ${startShow} - ${endShow} de ${totalRegistros}
+                    </div>
+                    <div class="d-flex justify-content-center align-items-center gap-2">
+                        <span class="text-muted small">(Pág ${currentPage} de ${totalPages})</span>
+                        <div class="btn-group shadow-sm">
+                            <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disablePrev} onclick="cambiarPagina(-1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button class="btn btn-secondary btn-sm py-0 px-2" disabled style="font-weight:bold;">
+                                ${currentPage}
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm py-0 px-2" ${disableNext} onclick="cambiarPagina(1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex: 0 0 auto; text-align: right;">
+                    <button class="btn btn-dark btn-sm shadow-sm" onclick="abrirVistaDetalles()">
+                        <i class="bi bi-list-columns-reverse me-1"></i> Detalles
+                    </button>
+                </div>
+
             </div>
         `;
 
-        const tFoot = document.getElementById('tFoot');
-        if (tFoot) tFoot.innerHTML = `<tr><td colspan="16" class="p-2 bg-light border-top">${htmlContenido}</td></tr>`;
+        // --- 4. INYECTAR EN HEADER Y FOOTER ---
         
-        // (Opcional) Actualizar también los otros elementos si los usas
+        // Header (Fila superior de la tabla)
+        const tHeadSummary = document.getElementById('tHeadSummary');
+        if (tHeadSummary) {
+            tHeadSummary.style.display = 'table-row'; // Aseguramos que se vea
+            // Usamos innerHTML en la celda (cells[0]) que tiene el colspan
+            tHeadSummary.cells[0].className = "bg-light border-bottom"; // Un fondito suave
+            tHeadSummary.cells[0].innerHTML = htmlContenido;
+        }
+
+        // Footer (Pie de la tabla)
+        const tFoot = document.getElementById('tFoot');
+        if (tFoot) {
+            tFoot.innerHTML = `<tr><td colspan="16" class="bg-light border-top">${htmlContenido}</td></tr>`;
+        }
+        
+        // Alerta de detalles (Opcional, la dejamos simple)
         const alertDetalles = document.getElementById('alertFiltrosDetalles');
         if (alertDetalles) alertDetalles.innerHTML = `<strong>Resumen:</strong> Máquinas ( <b>${totalRegistros}</b> ) | Filtros ( <b>${contadorCategorias}</b> ): ${textoDetalle}`;
     }
