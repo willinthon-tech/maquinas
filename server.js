@@ -153,20 +153,22 @@ app.get('/api/:tabla', (req, res) => {
     const { tabla } = req.params;
     const { userId } = req.query;
 
-    // --- BLOQUE NUEVO PARA PIANAS ---
+    // --- BLOQUE PIANAS ---
     if (tabla === 'pianas') {
-        // OJO: Aquí 's.pianas' debe existir en la BD (Causa #1)
         const sql = "SELECT s.id, s.nombre, s.grupo_id, s.pianas, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY s.nombre";
         
-        return db.query(sql, (err, results) => {
+        // CORRECCIÓN: Quitamos el 'return' de aquí abajo. 
+        // Solo ejecutamos db.query y dejamos que el callback responda.
+        db.query(sql, (err, results) => {
             if (err) {
-                console.error("Error SQL Pianas:", err.message); // Ver esto en la consola negra del servidor
+                console.error("Error SQL Pianas:", err.message);
                 return res.status(500).send(err.message);
             }
             res.json(results);
         });
+        return; // Este return SÍ va aquí para detener la ejecución y que no siga al código de abajo
     }
-    // --------------------------------
+    // ---------------------
 
     let sql = "";
     if (tabla === 'maquina') {
