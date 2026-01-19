@@ -153,12 +153,16 @@ app.get('/api/:tabla', (req, res) => {
     const { tabla } = req.params;
     const { userId } = req.query;
 
-    // --- AGREGA ESTO AL PRINCIPIO ---
+    // --- BLOQUE NUEVO PARA PIANAS ---
     if (tabla === 'pianas') {
-        // Reutilizamos la lógica de sucursal pero devolviendo la columna pianas
+        // OJO: Aquí 's.pianas' debe existir en la BD (Causa #1)
         const sql = "SELECT s.id, s.nombre, s.grupo_id, s.pianas, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY s.nombre";
+        
         return db.query(sql, (err, results) => {
-            if (err) return res.status(500).send(err.message);
+            if (err) {
+                console.error("Error SQL Pianas:", err.message); // Ver esto en la consola negra del servidor
+                return res.status(500).send(err.message);
+            }
             res.json(results);
         });
     }
