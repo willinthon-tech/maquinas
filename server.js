@@ -208,8 +208,19 @@ app.get('/api/:tabla', (req, res) => {
 });
 
 app.get('/api/:tabla/:id', (req, res) => {
-    const { tabla, id } = req.params;
-    db.query(`SELECT * FROM ${tabla} WHERE id = ?`, [id], (err, results) => res.json(results[0]));
+    // CAMBIO 1: Usamos 'let' para poder modificar la variable
+    let { tabla, id } = req.params;
+
+    // CAMBIO 2: Si piden 'pianas', buscamos en 'sucursal'
+    if (tabla === 'pianas') {
+        tabla = 'sucursal';
+    }
+
+    // Ahora sí hacemos la consulta a la tabla correcta
+    db.query(`SELECT * FROM ${tabla} WHERE id = ?`, [id], (err, results) => {
+        if (err) return res.status(500).send(err.message);
+        res.json(results[0]);
+    });
 });
 
 app.post('/api/:tabla', (req, res) => {
