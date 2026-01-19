@@ -225,12 +225,12 @@ app.post('/api/:tabla', (req, res) => {
 });
 
 app.put('/api/:tabla/:id', (req, res) => {
-    const { tabla, id } = req.params;
+    let { tabla, id } = req.params;
     let data = req.body;
 
-    // --- AGREGA ESTO ---
+    // --- Redirección de Pianas a Sucursal ---
     if (tabla === 'pianas') {
-        tabla = 'sucursal'; // Redireccionamos a la tabla real
+        tabla = 'sucursal'; // Ahora sí funciona porque usamos 'let' arriba
     }
     // -------------------
 
