@@ -152,6 +152,18 @@ app.get('/api/options/:tabla', (req, res) => {
 app.get('/api/:tabla', (req, res) => {
     const { tabla } = req.params;
     const { userId } = req.query;
+
+    // --- AGREGA ESTO AL PRINCIPIO ---
+    if (tabla === 'pianas') {
+        // Reutilizamos la lógica de sucursal pero devolviendo la columna pianas
+        const sql = "SELECT s.id, s.nombre, s.grupo_id, s.pianas, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY s.nombre";
+        return db.query(sql, (err, results) => {
+            if (err) return res.status(500).send(err.message);
+            res.json(results);
+        });
+    }
+    // --------------------------------
+
     let sql = "";
     if (tabla === 'maquina') {
         sql = `SELECT m.*, 
@@ -211,6 +223,12 @@ app.post('/api/:tabla', (req, res) => {
 app.put('/api/:tabla/:id', (req, res) => {
     const { tabla, id } = req.params;
     let data = req.body;
+
+    // --- AGREGA ESTO ---
+    if (tabla === 'pianas') {
+        tabla = 'sucursal'; // Redireccionamos a la tabla real
+    }
+    // -------------------
 
     if (tabla === 'maquina') {
         data = procesarDatosMaquina(data); // Aplicamos la limpieza también al editar

@@ -108,6 +108,7 @@
     <nav id="sidebar">
         <div class="brand">Inventario Global<br>de Maquinas</div>
         <a onclick="cambiarVista('maquina')" id="link-maquina">Máquinas</a>
+        <a onclick="cambiarVista('pianas')" id="link-pianas">Pianas</a>
         <div id="menu-admin-only">
             <hr style="border-color: #2b2b40;">
             <a onclick="cambiarVista('grupo')" id="link-grupo">Grupos</a>
@@ -581,6 +582,27 @@
             }).join('');
 
         // --- OTRAS VISTAS ---
+        } else if (vista === 'pianas') {
+            // VISTA ESPECÍFICA DE PIANAS
+            titles.innerHTML = `<th>ID</th><th>Sucursal / Sala</th><th>Grupo</th><th class="text-center">Cant. Pianas</th><th class="text-center">Acciones</th>`;
+            
+            body.innerHTML = data.map(i => `
+                <tr>
+                    <td>${i.id}</td>
+                    <td><b>${i.nombre}</b></td>
+                    <td>${i.grupo_nom || '-'}</td>
+                    <td class="text-center">
+                        <span class="badge bg-primary fs-6">${i.pianas || 0}</span>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center">
+                            <button onclick="abrirModalParametro(${i.id})" class="btn btn-outline-primary btn-action">
+                                <i class="bi bi-pencil"></i> Editar
+                            </button> 
+                            </div>
+                    </td>
+                </tr>`).join('');
+
         } else if (vista === 'sucursal' || vista === 'modelo') {
             const padre = (vista === 'sucursal') ? 'Grupo' : 'Marca';
             const nomPadre = (vista === 'sucursal') ? 'grupo_nom' : 'marca_nom';
@@ -969,10 +991,31 @@
         localStorage.setItem('ultimaVista', vista);
         document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active-link'));
         const link = document.getElementById(`link-${v}`); if(link) link.classList.add('active-link');
-        document.getElementById('viewTitle').innerText = (v === 'maquina') ? 'Inventario de Máquinas' : v;
+        
+        // Títulos
+        const titulos = {
+            'maquina': 'Inventario de Máquinas',
+            'pianas': 'Gestión de Pianas por Sala' // Título personalizado
+        };
+        
+        document.getElementById('viewTitle').innerText = titulos[v] || v.charAt(0).toUpperCase() + v.slice(1);
         document.getElementById('panelFiltros').style.display = (v === 'maquina') ? 'block' : 'none';
         document.getElementById('tHeadSummary').style.display = 'none'; document.getElementById('tFoot').innerHTML = "";
-        aplicarPermisosUI(); cancelarFormulario(); cerrarVistaDetalles(); cargarTabla();
+
+        aplicarPermisosUI(); 
+
+        // --- LÓGICA BOTÓN NUEVO ---
+        // Si es Pianas, ocultamos el botón de crear siempre. Si no, depende del nivel.
+        const btnNuevo = document.getElementById('btn-nuevo-global');
+        if (v === 'pianas') {
+            btnNuevo.style.display = 'none';
+        } else {
+            // Restauramos la lógica original (Oculto si es nivel 3, visible si no)
+            btnNuevo.style.display = (usuarioActual.nivel == 3) ? 'none' : 'block';
+        }
+        // --------------------------
+        
+        cancelarFormulario(); cerrarVistaDetalles(); cargarTabla();
     }
 
     async function abrirModalParametro(id = null) {
@@ -994,6 +1037,23 @@
                         <div class="mb-2"><label class="filter-label">Clave</label><input type="password" name="clave" class="form-control" value="${current.clave || ''}" required></div>
                         <div class="mb-2"><label class="filter-label">Nivel</label><select name="nivel" class="form-select" ${isW ? 'disabled' : ''}><option value="1" ${current.nivel==1?'selected':''}>Admin</option><option value="2" ${current.nivel==2?'selected':''}>Supervisor</option><option value="3" ${current.nivel==3?'selected':''}>Normal</option></select></div>
                         ${isW ? '<input type="hidden" name="usuario" value="willinthon"><input type="hidden" name="nivel" value="1">' : ''}`;
+            } else if (vista === 'pianas') {
+                    // --- FORMULARIO SOLO PARA PIANAS ---
+                    html = `
+                        <div class="alert alert-info py-2 small mb-3">
+                            Defina la cantidad de pianas para la sala <b>${current.nombre}</b>
+                        </div>
+                        <div class="mb-3">
+                            <label class="filter-label">Nombre Sucursal</label>
+                            <input type="text" class="form-control" value="${current.nombre}" disabled readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="filter-label">Cantidad de Pianas</label>
+                            <input type="number" name="pianas" class="form-control fw-bold text-primary" 
+                                value="${current.pianas || 0}" min="0" required autofocus>
+                        </div>
+                    `;
+                    // -----------------------------------
             } else {
                 const d = {'sucursal':[{l:'Grupo',t:'grupo',f:'grupo_id'}],'modelo':[{l:'Marca',t:'marca',f:'marca_id'}]};
                 html = `<div class="mb-3"><label class="filter-label">Nombre</label><input type="text" name="nombre" class="form-control" value="${current.nombre || ''}" required></div>`;
