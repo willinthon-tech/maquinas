@@ -853,7 +853,28 @@
 
         let textoDetalle = descripciones.length > 0 ? descripciones.join(', ') : "Ninguno";
 
-        // --- 2. CÁLCULOS DE PAGINACIÓN ---
+        // --- 2. CÁLCULO DE CONTEO POR TIPOS (BADGES) ---
+        const conteoTipos = {};
+        currentFiltered.forEach(m => {
+            const tipo = m.tipo_nom || "N/A";
+            conteoTipos[tipo] = (conteoTipos[tipo] || 0) + 1;
+        });
+
+        // Generamos el HTML de los badges
+        const htmlBadges = Object.entries(conteoTipos).map(([nombre, cant]) => `
+            <span class="badge border text-dark me-2 shadow-sm" style="background: #f8f9fa; font-size: 0.7rem; border-color: #dee2e6 !important;">
+                <span class="text-primary fw-bold">${nombre}:</span> ${cant}
+            </span>
+        `).join('');
+
+        const contenedorBadges = `
+            <div class="d-flex flex-wrap gap-1 align-items-center">
+                <small class="text-muted fw-bold me-2 uppercase" style="font-size: 0.6rem;">DISTRIBUCIÓN:</small>
+                ${htmlBadges || '<small class="text-muted">Sin datos</small>'}
+            </div>
+        `;
+
+        // --- 3. CÁLCULOS DE PAGINACIÓN ---
         const totalPages = Math.ceil(totalRegistros / itemsPerPage) || 1; 
         const disablePrev = currentPage === 1 ? 'disabled' : '';
         const disableNext = (currentPage >= totalPages || totalRegistros === 0) ? 'disabled' : '';
@@ -862,7 +883,7 @@
         // Si itemsPerPage es gigante (Todas), endShow no debe superar el total
         const endShow = Math.min(currentPage * itemsPerPage, totalRegistros);
 
-        // --- 3. HTML (Con Selector de Filas) ---
+        // --- 4. HTML (Con Selector de Filas) ---
         const htmlContenido = `
             <div class="d-flex align-items-center justify-content-between w-100 py-1" style="font-size: 0.75rem;">
                 
@@ -907,7 +928,12 @@
             </div>
         `;
 
-        // --- 4. INYECTAR EN DOM ---
+        // --- 5. INYECTAR EN DOM ---
+
+        // Inyectar Badges en el Header Superior
+        const rowCountHeader = document.getElementById('tHeadCountTypes');
+        if (rowCountHeader) rowCountHeader.cells[0].innerHTML = contenedorBadges;
+        
         const tHeadSummary = document.getElementById('tHeadSummary');
         if (tHeadSummary) {
             tHeadSummary.style.display = 'table-row';
@@ -915,9 +941,13 @@
             tHeadSummary.cells[0].innerHTML = htmlContenido;
         }
 
+        // Inyectar Todo en el Footer (Paginado arriba y Badges abajo)
         const tFoot = document.getElementById('tFoot');
         if (tFoot) {
-            tFoot.innerHTML = `<tr><td colspan="16" class="bg-light border-top">${htmlContenido}</td></tr>`;
+            tFoot.innerHTML = `
+                <tr><td colspan="16" class="bg-light border-top">${htmlContenido}</td></tr>
+                <tr><td colspan="16" class="bg-white border-top p-2">${contenedorBadges}</td></tr>
+            `;
         }
         
         const alertDetalles = document.getElementById('alertFiltrosDetalles');
