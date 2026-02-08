@@ -638,7 +638,6 @@
 
     function renderizarTabla(data) {
         const titles = document.getElementById('tHeadTitles'), body = document.getElementById('tBody');
-        const styleAcc = (usuarioActual.nivel == 3) ? 'display:none' : '';
 
         // --- VALIDACIÓN: SI NO HAY DATOS ---
         if (data.length === 0) {
@@ -656,7 +655,7 @@
 
         // --- LÓGICA VISTA MÁQUINAS (PAGINACIÓN) ---
         if(vista === 'maquina') {
-            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th>Tipo</th><th>Puestos</th><th>Modo</th><th>Legal</th><th class="text-center" style="${styleAcc}">Acciones</th>`;
+            titles.innerHTML = `<th>ID</th><th>Nombre</th><th>Serial</th><th>Grupo</th><th>Sala</th><th>Marca</th><th>Modelo</th><th>Juego</th><th>Estado</th><th>Soc.</th><th>Val.</th><th>Tipo</th><th>Puestos</th><th>Modo</th><th>Legal</th><th class="text-center">Acciones</th>`;
             
             const start = (currentPage - 1) * itemsPerPage;
             const end = (itemsPerPage > 10000) ? data.length : start + itemsPerPage; // Manejo de "Todas"
@@ -664,6 +663,11 @@
 
             body.innerHTML = pageData.map(i => {
                 const badgeColor = (i.serial === 'N/A' || !i.serial) ? 'bg-danger' : 'bg-dark';
+
+                // Determinamos si mostramos Editar/Borrar según el nivel
+                const isAdminOrSuper = (usuarioActual.nivel == 1 || usuarioActual.nivel == 2);
+                const styleAdminOnly = isAdminOrSuper ? '' : 'display:none';
+
                 return `
                     <tr>
                         <td>${i.id}</td>
@@ -681,10 +685,10 @@
                         <td class="fw-bold text-center">${i.puestos || '1'}</td>
                         <td>${i.modo_nom || '-'}</td>
                         <td>${i.legal_nom || '-'}</td>
-                        <td class="text-center" style="${styleAcc}">
+                        <td class="text-center">
                             <div class="d-flex justify-content-center gap-1">
-                                <button onclick="abrirEditorMaquina(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> 
-                                <button onclick="solicitarEliminar(${i.id}, 'maquina')" class="btn btn-outline-danger btn-action">Borrar</button>
+                                <button onclick="abrirEditorMaquina(${i.id})" class="btn btn-outline-primary btn-action" style="${styleAdminOnly}">Editar</button> 
+                                <button onclick="solicitarEliminar(${i.id}, 'maquina')" class="btn btn-outline-danger btn-action" style="${styleAdminOnly}">Borrar</button>
                                 <button onclick="imprimirEtiqueta(${i.id})" class="btn btn-outline-dark btn-action" title="Imprimir Etiqueta 57x32">57x32</button>
                             </div>
                         </td>
