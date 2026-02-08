@@ -1619,7 +1619,6 @@
         document.body.appendChild(iframe);
     }
 
-    // Lógica dinámica para Sala o Galpón
     const labelUbicacion = (maquina.grupo_nom && maquina.grupo_nom.toUpperCase() === "GALPON") ? "GALPON" : "SALA";
 
     const content = `
@@ -1635,18 +1634,25 @@
                     height: 32mm; 
                     box-sizing: border-box;
                     display: flex;
-                    flex-direction: column;
-                    line-height: 1.1;
+                    flex-direction: column; /* Alineación vertical */
                 }
                 .header-name { 
                     font-size: 10pt; 
                     font-weight: 800; 
                     text-align: center; 
                     border-bottom: 1px solid #000; 
-                    margin-bottom: 1.5px;
+                    margin-bottom: 2px;
+                    flex-shrink: 0; /* Mantiene su tamaño arriba */
+                }
+                /* CONTENEDOR CENTRAL: Aquí ocurre la magia del centrado */
+                .main-content {
+                    flex-grow: 1; /* Ocupa todo el espacio disponible */
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center; /* Centra el contenido verticalmente */
                 }
                 .info-row { 
-                    font-size: 6.8pt; /* Letras más pequeñas para que quepa todo */
+                    font-size: 6.8pt; 
                     margin-bottom: 0.2px; 
                     white-space: nowrap; 
                     overflow: hidden; 
@@ -1655,30 +1661,32 @@
                 .bold { font-weight: bold; }
                 .footer { 
                     font-size: 6pt; 
-                    text-align: center; 
-                    margin-top: auto; 
+                    margin-top: 2px;
                     padding-top: 1px;
                     border-top: 0.5px solid #ccc;
                     display: flex;
                     justify-content: space-between;
+                    flex-shrink: 0; /* Se queda pegado abajo */
                 }
             </style>
         </head>
         <body>
             <div class="header-name">${maquina.nombre.toUpperCase()}</div>
             
-            <div class="info-row"><span class="bold">S/N:</span> ${maquina.serial || 'N/A'}</div>
-            <div class="info-row"><span class="bold">${labelUbicacion}:</span> ${maquina.sala_nom || '-'}</div>
-            <div class="info-row"><span class="bold">MARCA:</span> ${maquina.marca_nom || '-'} <span class="bold">MOD:</span> ${maquina.modelo_nom || '-'}</div>
-            <div class="info-row"><span class="bold">JUEGO:</span> ${maquina.juego_nom || '-'}</div>
-            <div class="info-row"><span class="bold">SOCIEDAD:</span> ${maquina.sociedad_nom || '-'}</div>
-            
-            <div class="info-row">
-                <span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} | <span class="bold">VALOR:</span> ${maquina.valor_nom || '-'}
-            </div>
-            
-            <div class="info-row">
-                <span class="bold">MODO:</span> ${maquina.modo_nom || '-'} | <span class="bold">CNC:</span> ${maquina.legal_nom || 'N/A'}
+            <div class="main-content">
+                <div class="info-row"><span class="bold">S/N:</span> ${maquina.serial || 'N/A'}</div>
+                <div class="info-row"><span class="bold">${labelUbicacion}:</span> ${maquina.sala_nom || '-'}</div>
+                <div class="info-row"><span class="bold">MARCA:</span> ${maquina.marca_nom || '-'} <span class="bold">MOD:</span> ${maquina.modelo_nom || '-'}</div>
+                <div class="info-row"><span class="bold">JUEGO:</span> ${maquina.juego_nom || '-'}</div>
+                <div class="info-row"><span class="bold">SOCIEDAD:</span> ${maquina.sociedad_nom || '-'}</div>
+                
+                <div class="info-row">
+                    <span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} | <span class="bold">VALOR:</span> ${maquina.valor_nom || '-'}
+                </div>
+                
+                <div class="info-row">
+                    <span class="bold">MODO:</span> ${maquina.modo_nom || '-'} | <span class="bold">CNC:</span> ${maquina.legal_nom || 'N/A'}
+                </div>
             </div>
 
             <div class="footer">
