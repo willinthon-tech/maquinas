@@ -152,6 +152,43 @@
             margin-left: auto;
         }
 
+        /* Estilos para la etiqueta de impresión */
+@media print {
+    @page {
+        size: 57mm 32mm;
+        margin: 0;
+    }
+    body * { visibility: hidden; }
+    #print-section, #print-section * { visibility: visible; }
+    #print-section {
+        position: absolute;
+        left: 0; top: 0;
+        width: 57mm;
+        height: 32mm;
+        padding: 2mm;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: white;
+    }
+}
+
+.label-container {
+    width: 57mm;
+    height: 32mm;
+    font-family: Arial, sans-serif;
+    padding: 2mm;
+    border: 1px dashed #ccc; /* Solo visible en pantalla */
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.label-title { font-size: 10pt; font-weight: bold; border-bottom: 1px solid black; margin-bottom: 2px; text-align: center; }
+.label-item { font-size: 7pt; margin-bottom: 1px; }
+.label-footer { font-size: 6pt; margin-top: auto; text-align: right; font-style: italic; }
+
     </style>
 </head>
 <body>
@@ -648,6 +685,7 @@
                             <div class="d-flex justify-content-center gap-1">
                                 <button onclick="abrirEditorMaquina(${i.id})" class="btn btn-outline-primary btn-action">Editar</button> 
                                 <button onclick="solicitarEliminar(${i.id}, 'maquina')" class="btn btn-outline-danger btn-action">Borrar</button>
+                                <button onclick="imprimirEtiqueta(${i.id})" class="btn btn-outline-dark btn-action" title="Imprimir Etiqueta 57x32">57x32</button>
                             </div>
                         </td>
                     </tr>`;
@@ -1568,6 +1606,61 @@
         doc.save(nombreArchivo);
     }
     
+
+    async function imprimirEtiqueta(id) {
+    // 1. Buscar la data de la máquina
+    const maquina = allData.find(m => m.id === id);
+    if (!maquina) return;
+
+    // 2. Crear un iframe oculto para la impresión
+    let iframe = document.getElementById('print-frame');
+    if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'print-frame';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+    }
+
+    // 3. Contenido de la etiqueta
+    const content = `
+        <html>
+        <head>
+            <style>
+                @page { size: 57mm 32mm; margin: 0; }
+                body { margin: 0; padding: 2mm; font-family: sans-serif; width: 57mm; height: 32mm; box-sizing: border-box; }
+                .t { font-size: 11pt; font-weight: bold; text-align: center; border-bottom: 1px solid #000; margin-bottom: 3px; }
+                .i { font-size: 8pt; margin: 1px 0; white-space: nowrap; overflow: hidden; }
+                .bold { font-weight: bold; }
+                .footer { font-size: 7pt; text-align: center; margin-top: 4px; border-top: 0.5px solid #eee; }
+            </style>
+        </head>
+        <body>
+            <div class="t">${maquina.nombre.toUpperCase()}</div>
+            <div class="i"><span class="bold">S/N:</span> ${maquina.serial || 'N/A'}</div>
+            <div class="i"><span class="bold">SALA:</span> ${maquina.sala_nom || '-'}</div>
+            <div class="i"><span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} - ${maquina.marca_nom || '-'}</div>
+            <div class="i"><span class="bold">JUEGO:</span> ${maquina.juego_nom || '-'}</div>
+            <div class="footer">ID: ${maquina.id} | WISI INV</div>
+        </body>
+        </html>
+    `;
+
+    // 4. Escribir en el iframe e imprimir
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(content);
+    doc.close();
+
+    // Pequeña pausa para asegurar que el contenido cargue antes de imprimir
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    }, 250);
+}
+
+
+
+
     // --- PEGA AQUÍ LOS LISTENERS DE LOS CAMPOS DE TEXTO ---
     const inputNombre = document.getElementById('f-nombre');
     const inputSerial = document.getElementById('f-serial');
