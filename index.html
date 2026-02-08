@@ -1608,11 +1608,9 @@
     
 
     async function imprimirEtiqueta(id) {
-    // 1. Buscar la data de la máquina
     const maquina = allData.find(m => m.id === id);
     if (!maquina) return;
 
-    // 2. Crear un iframe oculto para la impresión
     let iframe = document.getElementById('print-frame');
     if (!iframe) {
         iframe = document.createElement('iframe');
@@ -1621,37 +1619,81 @@
         document.body.appendChild(iframe);
     }
 
-    // 3. Contenido de la etiqueta
     const content = `
         <html>
         <head>
             <style>
                 @page { size: 57mm 32mm; margin: 0; }
-                body { margin: 0; padding: 2mm; font-family: sans-serif; width: 57mm; height: 32mm; box-sizing: border-box; }
-                .t { font-size: 11pt; font-weight: bold; text-align: center; border-bottom: 1px solid #000; margin-bottom: 3px; }
-                .i { font-size: 8pt; margin: 1px 0; white-space: nowrap; overflow: hidden; }
+                body { 
+                    margin: 0; 
+                    padding: 1.5mm 2mm; 
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                    width: 57mm; 
+                    height: 32mm; 
+                    box-sizing: border-box;
+                    display: flex;
+                    flex-direction: column;
+                    background-color: white;
+                }
+                .header-line { 
+                    font-size: 11pt; 
+                    font-weight: 800; 
+                    text-align: center; 
+                    border-bottom: 1.5px solid #000; 
+                    margin-bottom: 2px;
+                    padding-bottom: 1px;
+                }
+                .info-row { 
+                    font-size: 7.5pt; 
+                    margin-bottom: 0.5px; 
+                    white-space: nowrap; 
+                    overflow: hidden; 
+                    text-overflow: ellipsis;
+                }
                 .bold { font-weight: bold; }
-                .footer { font-size: 7pt; text-align: center; margin-top: 4px; border-top: 0.5px solid #eee; }
+                .cnc-badge {
+                    font-weight: 900;
+                    color: black;
+                }
+                .footer { 
+                    font-size: 6.5pt; 
+                    text-align: center; 
+                    margin-top: auto; 
+                    padding-top: 1px;
+                    border-top: 0.8px solid #ccc;
+                    display: flex;
+                    justify-content: space-between;
+                }
             </style>
         </head>
         <body>
-            <div class="t">${maquina.nombre.toUpperCase()}</div>
-            <div class="i"><span class="bold">S/N:</span> ${maquina.serial || 'N/A'}</div>
-            <div class="i"><span class="bold">SALA:</span> ${maquina.sala_nom || '-'}</div>
-            <div class="i"><span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} - ${maquina.marca_nom || '-'}</div>
-            <div class="i"><span class="bold">JUEGO:</span> ${maquina.juego_nom || '-'}</div>
-            <div class="footer">ID: ${maquina.id} | WISI INV</div>
+            <div class="header-line">${maquina.nombre.toUpperCase()}</div>
+            
+            <div class="info-row"><span class="bold">S/N:</span> ${maquina.serial || 'N/A'}</div>
+            <div class="info-row"><span class="bold">SALA:</span> ${maquina.sala_nom || '-'}</div>
+            <div class="info-row"><span class="bold">MARCA:</span> ${maquina.marca_nom || '-'} <span class="bold">MOD:</span> ${maquina.modelo_nom || '-'}</div>
+            <div class="info-row"><span class="bold">JUEGO:</span> ${maquina.juego_nom || '-'}</div>
+            <div class="info-row">
+                <span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} | 
+                <span class="bold">MODO:</span> ${maquina.modo_nom || '-'}
+            </div>
+            <div class="info-row">
+                <span class="bold">LEGAL:</span> <span class="cnc-badge">${maquina.legal_nom ? maquina.legal_nom.toUpperCase() : 'NO'}</span>
+            </div>
+
+            <div class="footer">
+                <span>ID: ${maquina.id}</span>
+                <span class="bold">Wisi Space</span>
+            </div>
         </body>
         </html>
     `;
 
-    // 4. Escribir en el iframe e imprimir
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(content);
     doc.close();
 
-    // Pequeña pausa para asegurar que el contenido cargue antes de imprimir
     setTimeout(() => {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
@@ -1660,7 +1702,7 @@
 
 
 
-
+    
     // --- PEGA AQUÍ LOS LISTENERS DE LOS CAMPOS DE TEXTO ---
     const inputNombre = document.getElementById('f-nombre');
     const inputSerial = document.getElementById('f-serial');
