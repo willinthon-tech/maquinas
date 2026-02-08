@@ -1619,6 +1619,9 @@
         document.body.appendChild(iframe);
     }
 
+    // Lógica dinámica para Sala o Galpón
+    const labelUbicacion = (maquina.grupo_nom && maquina.grupo_nom.toUpperCase() === "GALPON") ? "GALPON" : "SALA";
+
     const content = `
         <html>
         <head>
@@ -1626,59 +1629,56 @@
                 @page { size: 57mm 32mm; margin: 0; }
                 body { 
                     margin: 0; 
-                    padding: 1.5mm 2mm; 
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                    padding: 1mm 2mm; 
+                    font-family: 'Segoe UI', Arial, sans-serif; 
                     width: 57mm; 
                     height: 32mm; 
                     box-sizing: border-box;
                     display: flex;
                     flex-direction: column;
-                    background-color: white;
+                    line-height: 1.1;
                 }
-                .header-line { 
-                    font-size: 11pt; 
+                .header-name { 
+                    font-size: 10pt; 
                     font-weight: 800; 
                     text-align: center; 
-                    border-bottom: 1.5px solid #000; 
-                    margin-bottom: 2px;
-                    padding-bottom: 1px;
+                    border-bottom: 1px solid #000; 
+                    margin-bottom: 1.5px;
                 }
                 .info-row { 
-                    font-size: 7.5pt; 
-                    margin-bottom: 0.5px; 
+                    font-size: 6.8pt; /* Letras más pequeñas para que quepa todo */
+                    margin-bottom: 0.2px; 
                     white-space: nowrap; 
                     overflow: hidden; 
                     text-overflow: ellipsis;
                 }
                 .bold { font-weight: bold; }
-                .cnc-badge {
-                    font-weight: 900;
-                    color: black;
-                }
                 .footer { 
-                    font-size: 6.5pt; 
+                    font-size: 6pt; 
                     text-align: center; 
                     margin-top: auto; 
                     padding-top: 1px;
-                    border-top: 0.8px solid #ccc;
+                    border-top: 0.5px solid #ccc;
                     display: flex;
                     justify-content: space-between;
                 }
             </style>
         </head>
         <body>
-            <div class="header-line">${maquina.nombre.toUpperCase()}</div>
+            <div class="header-name">${maquina.nombre.toUpperCase()}</div>
             
             <div class="info-row"><span class="bold">S/N:</span> ${maquina.serial || 'N/A'}</div>
-            <div class="info-row"><span class="bold">SALA:</span> ${maquina.sala_nom || '-'}</div>
+            <div class="info-row"><span class="bold">${labelUbicacion}:</span> ${maquina.sala_nom || '-'}</div>
             <div class="info-row"><span class="bold">MARCA:</span> ${maquina.marca_nom || '-'} <span class="bold">MOD:</span> ${maquina.modelo_nom || '-'}</div>
             <div class="info-row"><span class="bold">JUEGO:</span> ${maquina.juego_nom || '-'}</div>
+            <div class="info-row"><span class="bold">SOCIEDAD:</span> ${maquina.sociedad_nom || '-'}</div>
+            
             <div class="info-row">
-                <span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} | 
-                <span class="bold">MODO:</span> ${maquina.modo_nom || '-'}
+                <span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} | <span class="bold">VALOR:</span> ${maquina.valor_nom || '-'}
             </div>
+            
             <div class="info-row">
-                <span class="bold">LEGAL:</span> <span class="cnc-badge">${maquina.legal_nom ? maquina.legal_nom.toUpperCase() : 'NO'}</span>
+                <span class="bold">MODO:</span> ${maquina.modo_nom || '-'} | <span class="bold">CNC:</span> ${maquina.legal_nom || 'N/A'}
             </div>
 
             <div class="footer">
