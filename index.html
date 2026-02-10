@@ -1633,7 +1633,7 @@
                 body { 
                     margin: 0; 
                     padding: 0.5mm 2mm; 
-                    font-family: 'Segoe UI', Arial, sans-serif; 
+                  
                     width: 57mm; 
                     height: 32mm; 
                     box-sizing: border-box;
@@ -1641,7 +1641,7 @@
                     flex-direction: column;
                 }
                 .header-name { 
-                    font-size: 10pt; 
+                    font-size: 12pt; 
                     font-weight: 800; 
                     text-align: center; 
                     border-bottom: 1px solid #000; 
@@ -1655,18 +1655,18 @@
                     justify-content: center; /* Centrado vertical del bloque central */
                 }
                 .info-row { 
-                    font-size: 6.2pt; /* Reducido ligeramente para evitar desborde */
+                    font-size: 8pt; /* Reducido ligeramente para evitar desborde */
                     margin-bottom: 0.1mm; 
                     white-space: nowrap; 
                     overflow: hidden; 
                     text-overflow: ellipsis;
-                    line-height: 1;
+                    line-height: 1.2;
                 }
                 .bold { font-weight: bold; }
                 .footer { 
-                    font-size: 5.5pt; 
+                    font-size: 6pt; 
                     padding-top: 0.5mm;
-                    border-top: 0.5px solid #ccc;
+                    border-top: 1px solid #000;
                     display: flex;
                     justify-content: space-between;
                     flex-shrink: 0;
@@ -1677,13 +1677,12 @@
             <div class="header-name">${maquina.nombre.toUpperCase()}</div>
             
             <div class="main-content">
-                <div class="info-row"><span class="bold">S/N:</span> ${maquina.serial || 'N/A'}</div>
+                <div class="info-row"><span class="bold">SERIAL:</span> ${maquina.serial || 'N/A'}</div>
                 <div class="info-row"><span class="bold">${labelUbicacion}:</span> ${maquina.sala_nom || '-'}</div>
-                <div class="info-row"><span class="bold">MARCA:</span> ${maquina.marca_nom || '-'} <span class="bold">MOD:</span> ${maquina.modelo_nom || '-'}</div>
+                <div class="info-row"><span class="bold">MARCA:</span> ${maquina.marca_nom || '-'} | <span class="bold">MODELO:</span> ${maquina.modelo_nom || '-'}</div>
                 <div class="info-row"><span class="bold">JUEGO:</span> ${maquina.juego_nom || '-'}</div>
-                <div class="info-row"><span class="bold">SOCIEDAD:</span> ${maquina.sociedad_nom || '-'}</div>
-                <div class="info-row"><span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} | <span class="bold">VALOR:</span> ${maquina.valor_nom || '-'}</div>
-                <div class="info-row"><span class="bold">MODO:</span> ${maquina.modo_nom || '-'} | <span class="bold">CNC:</span> ${maquina.legal_nom || 'N/A'}</div>
+                <div class="info-row"><span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} | <span class="bold">MODO:</span> ${maquina.modo_nom || '-'}</div>
+                <div class="info-row"><span class="bold">SOCIEDAD:</span> ${maquina.sociedad_nom || '-'} | <span class="bold">VALOR:</span> ${maquina.valor_nom || '-'}</div>
             </div>
 
             <div class="footer">
