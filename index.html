@@ -11,6 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <meta name="theme-color" content="#1a1a27">
     <style>
         body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; overflow: hidden; margin: 0; }
@@ -1612,96 +1613,140 @@
     
 
     async function imprimirEtiqueta(id) {
+    // 1. Buscar la data
     const maquina = allData.find(m => m.id === id);
-    if (!maquina) return;
-
-    let iframe = document.getElementById('print-frame');
-    if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.id = 'print-frame';
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
+    if (!maquina) {
+        console.error("Máquina no encontrada para imprimir ID:", id);
+        return;
     }
 
+    // Determinamos la etiqueta de ubicación según tu lógica original
     const labelUbicacion = (maquina.grupo_nom && maquina.grupo_nom.toUpperCase() === "GALPON") ? "GALPON" : "SALA";
 
-    const content = `
-        <html>
-        <head>
-            <style>
-                @page { size: 57mm 32mm; margin: 0; }
-                body { 
-                    margin: 0; 
-                    padding: 0.5mm 2mm; 
-                  
-                    width: 57mm; 
-                    height: 32mm; 
-                    box-sizing: border-box;
-                    display: flex;
-                    flex-direction: column;
-                }
-                .header-name { 
-                    font-size: 12pt; 
-                    font-weight: 800; 
-                    text-align: center; 
-                    border-bottom: 1px solid #000; 
-                    margin-bottom: 1px;
-                    flex-shrink: 0;
-                }
-                .main-content {
-                    flex-grow: 1;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center; /* Centrado vertical del bloque central */
-                }
-                .info-row { 
-                    font-size: 8pt; /* Reducido ligeramente para evitar desborde */
-                    margin-bottom: 0.1mm; 
-                    white-space: nowrap; 
-                    overflow: hidden; 
-                    text-overflow: ellipsis;
-                    line-height: 1.2;
-                }
-                .bold { font-weight: bold; }
-                .footer { 
-                    font-size: 6pt; 
-                    padding-top: 0.5mm;
-                    border-top: 1px solid #000;
-                    display: flex;
-                    justify-content: space-between;
-                    flex-shrink: 0;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header-name">${maquina.nombre.toUpperCase()}</div>
-            
-            <div class="main-content">
-                <div class="info-row"><span class="bold">SERIAL:</span> ${maquina.serial || 'N/A'}</div>
-                <div class="info-row"><span class="bold">${labelUbicacion}:</span> ${maquina.sala_nom || '-'}</div>
-                <div class="info-row"><span class="bold">MARCA:</span> ${maquina.marca_nom || '-'} | <span class="bold">MODELO:</span> ${maquina.modelo_nom || '-'}</div>
-                <div class="info-row"><span class="bold">JUEGO:</span> ${maquina.juego_nom || '-'}</div>
-                <div class="info-row"><span class="bold">TIPO:</span> ${maquina.tipo_nom || '-'} | <span class="bold">MODO:</span> ${maquina.modo_nom || '-'}</div>
-                <div class="info-row"><span class="bold">SOCIEDAD:</span> ${maquina.sociedad_nom || '-'} | <span class="bold">VALOR:</span> ${maquina.valor_nom || '-'}</div>
+    // 2. Crear contenedor temporal fuera de pantalla
+    // Usamos este contenedor para "dibujar" la etiqueta en alta resolución
+    const container = document.createElement('div');
+    container.id = 'temp-hires-label-container';
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.zIndex = '-1';
+    container.style.backgroundColor = 'white';
+    
+    // --- AQUÍ ESTÁ LA CLAVE: EL DISEÑO EXACTO DE TU IMAGEN ---
+    // Se han usado estilos específicos para forzar blanco y negro puro y evitar suavizado.
+    container.innerHTML = `
+        <div style="
+            width: 57mm;
+            height: 32mm;
+            padding: 0.5mm 2mm; /* Padding original */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            color: black;
+            font-family: 'Courier New', Courier, monospace; /* Fuente monoespaciada para mejor definición térmica */
+            -webkit-font-smoothing: none; /* Desactiva suavizado */
+        ">
+            <div style="
+                font-size: 14pt; 
+                font-weight: 900; 
+                text-align: center; 
+                border-bottom: 2px solid black; /* Línea gruesa como en la foto */
+                margin-bottom: 0.5mm;
+            ">
+                ${maquina.nombre.toUpperCase()}
             </div>
 
-            <div class="footer">
+            <div style="
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start; /* Alineado arriba */
+                font-size: 8.5pt; /* Tamaño ajustado para lectura clara */
+                line-height: 1.2;
+                font-weight: bold;
+                overflow: hidden;
+                white-space: nowrap;
+            ">
+                <div>SERIAL: ${maquina.serial || 'N/A'}</div>
+                <div>${labelUbicacion}: ${maquina.sala_nom || '-'}</div>
+                <div>MARCA: ${maquina.marca_nom || '-'} | MODELO: ${maquina.modelo_nom || '-'}</div>
+                <div>JUEGO: ${maquina.juego_nom || '-'}</div>
+                <div>TIPO: ${maquina.tipo_nom || '-'} | MODO: ${maquina.modo_nom || '-'}</div>
+                <div>SOCIEDAD: ${maquina.sociedad_nom || '-'} | VALOR: ${maquina.valor_nom || '-'}</div>
+            </div>
+
+            <div style="
+                font-size: 7pt; 
+                border-top: 2px solid black; /* Línea gruesa */
+                padding-top: 0.5mm;
+                display: flex;
+                justify-content: space-between;
+                font-weight: 900;
+                margin-top: auto;
+            ">
                 <span>ID: ${maquina.id}</span>
-                <span class="bold">Wisi Space</span>
+                <span>Wisi Space</span>
             </div>
-        </body>
-        </html>
+        </div>
     `;
+    
+    document.body.appendChild(container);
 
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(content);
-    doc.close();
+    try {
+        // 3. Generar Imagen de Alta Definición (Scale 4 = Muy nítido)
+        // Necesitas tener cargada la librería html2canvas en tu proyecto
+        const canvas = await html2canvas(container.firstElementChild, {
+            scale: 4, 
+            logging: false,
+            useCORS: true,
+            backgroundColor: '#ffffff' // Asegura fondo blanco puro
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Limpieza del DOM
+        document.body.removeChild(container);
 
-    setTimeout(() => {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-    }, 250);
+        // 4. Preparar el iframe de impresión
+        let iframe = document.getElementById('print-frame');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'print-frame';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+        }
+
+        // Contenido del iframe: Solo la imagen generada
+        const content = `
+            <html>
+            <head>
+                <style>
+                    @page { size: 57mm 32mm; margin: 0mm; }
+                    body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center;}
+                    /* pixelated evita que el navegador intente suavizar la imagen de nuevo */
+                    img { width: 57mm; height: 32mm; display: block; image-rendering: pixelated; }
+                </style>
+            </head>
+            <body>
+                <img src="${imgData}" onload="window.focus(); setTimeout(()=> window.print(), 200);" />
+            </body>
+            </html>
+        `;
+
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(content);
+        doc.close();
+        // El window.print() se dispara automáticamente en el onload de la imagen arriba
+
+    } catch (error) {
+        console.error("Error generando la impresión:", error);
+        // Limpieza de emergencia si falla
+        const tempContainer = document.getElementById('temp-hires-label-container');
+        if (tempContainer) document.body.removeChild(tempContainer);
+    }
 }
 
 
