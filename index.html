@@ -1646,14 +1646,13 @@
             -webkit-font-smoothing: none; /* Desactiva suavizado */
         ">
             <div style="
-                font-size: 9pt; 
+                font-size: 10pt; 
                 font-weight: 900; 
                 text-align: center; 
                 border-bottom: 2px solid black; /* Línea gruesa como en la foto */
                 margin-bottom: 0.5mm;
-
                 display: flex;
-justify-content: space-between;
+                justify-content: space-between;
             ">
                 
                 <span>${maquina.nombre.toUpperCase()}</span>
@@ -1665,7 +1664,7 @@ justify-content: space-between;
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-start; /* Alineado arriba */
-                font-size: 12pt; /* Tamaño ajustado para lectura clara */
+                font-size: 8pt; /* Tamaño ajustado para lectura clara */
                 line-height: 1.2;
                 font-weight: bold;
                 overflow: hidden;
@@ -1681,7 +1680,7 @@ justify-content: space-between;
             </div>
 
             <div style="
-                font-size: 7pt; 
+                font-size: 9pt; 
                 border-top: 2px solid black; /* Línea gruesa */
                 padding-top: 0.5mm;
                 display: flex;
@@ -1690,7 +1689,7 @@ justify-content: space-between;
                 margin-top: auto;
             ">
                 <span>${maquina.sala_nom || '-'}</span>
-                <span>Wisi Space ( ${maquina.id} ) </span>
+                <span>ID:${maquina.id}</span>
             </div>
         </div>
     `;
