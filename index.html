@@ -1620,9 +1620,6 @@
         return;
     }
 
-    // Determinamos la etiqueta de ubicación según tu lógica original
-    const labelUbicacion = (maquina.grupo_nom && maquina.grupo_nom.toUpperCase() === "GALPON") ? "GALPON" : "SALA";
-
     // 2. Crear contenedor temporal fuera de pantalla
     // Usamos este contenedor para "dibujar" la etiqueta en alta resolución
     const container = document.createElement('div');
@@ -1649,7 +1646,7 @@
             -webkit-font-smoothing: none; /* Desactiva suavizado */
         ">
             <div style="
-                font-size: 8pt; 
+                font-size: 9pt; 
                 font-weight: 900; 
                 text-align: center; 
                 border-bottom: 2px solid black; /* Línea gruesa como en la foto */
@@ -1670,7 +1667,6 @@
                 white-space: nowrap;
             ">
                 <div>SERIAL: ${maquina.serial || 'N/A'}</div>
-                <div>${labelUbicacion}: ${maquina.sala_nom || '-'}</div>
                 <div>MARCA: ${maquina.marca_nom || '-'}</div>
                 <div>MODELO: ${maquina.modelo_nom || '-'}</div>
                 <div>JUEGO: ${maquina.juego_nom || '-'}</div>
@@ -1681,7 +1677,7 @@
             </div>
 
             <div style="
-                font-size: 6pt; 
+                font-size: 9pt; 
                 border-top: 2px solid black; /* Línea gruesa */
                 padding-top: 0.5mm;
                 display: flex;
@@ -1689,8 +1685,8 @@
                 font-weight: 900;
                 margin-top: auto;
             ">
-                <span>ID: ${maquina.id}</span>
-                <span>Wisi Space</span>
+                <span>${maquina.sala_nom || '-'}</span>
+                <span>Wisi Space ( ${maquina.id} ) </span>
             </div>
         </div>
     `;
