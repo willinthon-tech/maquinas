@@ -1651,8 +1651,13 @@
                 text-align: center; 
                 border-bottom: 2px solid black; /* Línea gruesa como en la foto */
                 margin-bottom: 0.5mm;
+
+                display: flex;
+justify-content: space-between;
             ">
-                ${maquina.nombre.toUpperCase()}
+                
+                <span>${maquina.nombre.toUpperCase()}</span>
+                <span>${maquina.serial || 'N/A'}</span>
             </div>
 
             <div style="
@@ -1666,7 +1671,6 @@
                 overflow: hidden;
                 white-space: nowrap;
             ">
-                <div>SERIAL: ${maquina.serial || 'N/A'}</div>
                 <div>MARCA: ${maquina.marca_nom || '-'}</div>
                 <div>MODELO: ${maquina.modelo_nom || '-'}</div>
                 <div>JUEGO: ${maquina.juego_nom || '-'}</div>
@@ -1677,7 +1681,7 @@
             </div>
 
             <div style="
-                font-size: 9pt; 
+                font-size: 7pt; 
                 border-top: 2px solid black; /* Línea gruesa */
                 padding-top: 0.5mm;
                 display: flex;
