@@ -155,7 +155,9 @@ app.get('/api/:tabla', (req, res) => {
 
     // --- BLOQUE PIANAS ---
     if (tabla === 'pianas') {
-        const sql = "SELECT s.id, s.nombre, s.grupo_id, s.pianas, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY s.nombre";
+        // Añadimos s.pianas_xl a la consulta
+        const sql = "SELECT s.id, s.nombre, s.grupo_id, s.pianas, s.pianas_xl, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY s.nombre";
+        //const sql = "SELECT s.id, s.nombre, s.grupo_id, s.pianas, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY s.nombre";
         
         // CORRECCIÓN: Quitamos el 'return' de aquí abajo. 
         // Solo ejecutamos db.query y dejamos que el callback responda.
