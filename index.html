@@ -890,7 +890,7 @@
     }
 
     function generarResumenReporte(totalRegistros) {
-        if (vista !== 'maquina') return;
+    if (vista == 'maquina'){
 
         // --- 1. PREPARAR TEXTO DE FILTROS ---
         let descripciones = [];
@@ -992,6 +992,7 @@
                 <tr><td colspan="16" class="bg-white border-top p-2">${contenedorBadges}</td></tr>
             `;
         }
+    }
     }
 
     function cambiarPagina(delta) {
