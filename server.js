@@ -12,6 +12,12 @@ app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
+app.get('/shared-s', (req, res) => {
+    res.sendFile(path.join(__dirname, 'shared-s.html'));
+});
+app.get('/shared-d', (req, res) => {
+    res.sendFile(path.join(__dirname, 'shared-d.html'));
+});
 
 // CONFIGURACIÓN DE BASE DE DATOS
 /* const db = mysql.createConnection({
@@ -31,6 +37,7 @@ const db = mysql.createPool({
     host: 'localhost',
     user: 'root',      
     password: '$0p0rt3R0y',      
+    //password: '',      
     database: 'sistema_maquinas',
     waitForConnections: true,
     connectionLimit: 10, // Mantiene hasta 10 conexiones abiertas listas para usar
@@ -146,6 +153,29 @@ app.get('/api/options/:tabla', (req, res) => {
             if (err) return res.status(500).send(err);
             res.json(results);
         });
+    }
+});
+
+app.get('/api/references/all', async (req, res) => {
+    const tablas = [
+        'grupo', 'sucursal', 'marca', 'modelo', 
+        'juego', 'estado', 'sociedad', 'valor', 
+        'tipo', 'modo', 'legal'
+    ];
+    try {
+        const promesas = tablas.map(tabla => {
+            return new Promise((resolve, reject) => {
+                db.query(`SELECT * FROM ${tabla}`, [], (err, rows) => {
+                    if (err) reject(err);
+                    else resolve({ [tabla]: rows });
+                });
+            });
+        });
+        const resultados = await Promise.all(promesas);
+        const respuestaUnificada = resultados.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+        res.json(respuestaUnificada);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

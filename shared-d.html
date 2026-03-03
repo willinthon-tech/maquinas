@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta Pública de Inventario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 20px; }
+        .public-header { border-bottom: 2px solid #1a1a27; margin-bottom: 20px; padding-bottom: 10px; }
+        .card { border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); margin-bottom: 20px; }
+        .table-sm { font-size: 0.85rem; }
+        .badge-filtro { background-color: #e9ecef; color: #495057; margin-right: 5px; font-weight: normal; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="public-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="fw-bold mb-0">Análisis de Inventario</h4>
+            <small class="text-muted" id="fecha-consulta"></small>
+        </div>
+        <img src="/logo_wisi.png" alt="Logo" height="40">
+    </div>
+
+    <div id="info-filtros" class="mb-3"></div>
+
+    <div id="containerPublico" class="row">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Cargando información...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Aquí recibimos la data (podría venir de un fetch a tu SQLite con un ID de link)
+    async function cargarVistaPublica() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shareId = urlParams.get('id');
+
+        try {
+            // Simulamos la carga desde tu nueva ruta de API compartida
+            const response = await fetch(`/api/public/share/${shareId}`);
+            const { filtros, data } = await response.json();
+
+            document.getElementById('fecha-consulta').innerText = `Generado el: ${new Date().toLocaleDateString()}`;
+            renderizarFiltros(filtros);
+            renderizarTablas(data, filtros.view[0]);
+
+        } catch (error) {
+            document.getElementById('containerPublico').innerHTML = `
+                <div class="alert alert-danger">El enlace ha expirado o no es válido.</div>
+            `;
+        }
+    }
+
+    function renderizarFiltros(filtros) {
+        let html = '<div class="d-flex flex-wrap gap-1">';
+        // Recorremos el objeto de IDs que "cazamos" antes
+        Object.keys(filtros).forEach(key => {
+            if (filtros[key].length > 0 && key !== 'view') {
+                html += `<span class="badge badge-filtro border text-uppercase">${key}: ${filtros[key].length}</span>`;
+            }
+        });
+        html += '</div>';
+        document.getElementById('info-filtros').innerHTML = html;
+    }
+
+    function renderizarTablas(data, viewType) {
+        const container = document.getElementById('containerPublico');
+        container.innerHTML = ''; // Limpiar spinner
+
+        if (viewType === "simple") {
+            // Renderizar una tabla única (Vista Simple)
+            let tableHtml = `
+                <div class="card p-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th><th>Nombre</th><th>Serial</th><th>Sala</th><th>Marca</th><th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.map(m => `
+                                    <tr>
+                                        <td>${m.id}</td><td>${m.nombre}</td><td>${m.serial}</td>
+                                        <td>${m.sala_nom}</td><td>${m.marca_nom}</td>
+                                        <td><span class="badge ${m.estado_id == 2 ? 'bg-success' : 'bg-secondary'}">${m.estado_nom}</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+            container.innerHTML = tableHtml;
+        } else {
+            // Aquí iría la lógica de agrupar por sucursal (Vista Detallada)
+            // ... similar a lo que ya tienes en abrirVistaDetalles
+        }
+    }
+
+    window.onload = cargarVistaPublica;
+</script>
+</body>
+</html>

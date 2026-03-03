@@ -283,7 +283,16 @@
             </div></div>
         </div>
         <div id="section-detalles" style="display:none;">
-            <div class="d-flex justify-content-between align-items-center mb-3"><h5>Análisis Detallado</h5><button class="btn btn-dark btn-sm" onclick="cerrarVistaDetalles()">Volver</button></div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5>Análisis Detallado</h5>
+                </div>
+                <div>
+                    <!-- <button class="btn btn-primary btn-sm" onclick="shareLink()">Link</button> -->
+                    <button class="btn btn-dark btn-sm" onclick="cerrarVistaDetalles()">Volver</button>
+                </div>
+                
+            </div>
             <div class="alert alert-primary py-2 x-small mb-3 shadow-sm" id="alertFiltrosDetalles"></div>
             <div class="row g-3" id="containerTablasDetalles"></div>
         </div>
@@ -302,6 +311,23 @@
 
 <div class="modal fade" id="modalErrorRelacion" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow"><div class="modal-header border-0 pb-0 text-danger"><h6 class="modal-title fw-bold">Acción Denegada</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><p class="small text-muted mb-0" id="msgErrorRelacion"></p></div><div class="modal-footer border-0"><button type="button" class="btn btn-dark btn-sm w-100" data-bs-dismiss="modal">Entendido</button></div></div></div></div>
 
+<div class="modal fade" id="modalGeneral" tabindex="-1" aria-labelledby="modalGeneralLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered shadow-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title fw-bold" id="modalGeneralLabel">Detalle de Máquinas</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light" id="modalGeneralBody" style="max-height: 75vh; overflow-y: auto;">
+                </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const API = "/api"; 
@@ -312,6 +338,8 @@
     // Agrega estas variables al inicio con las otras
     let currentPage = 1;
     let itemsPerPage = 10; // Ahora es variable (let) y empieza en 10
+
+    let dataFilterParamsLink = {};
 
     const modalParam = new bootstrap.Modal(document.getElementById('modalParam'));
     const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
@@ -339,6 +367,29 @@
         { id: 'modo', key: 'modo_nom', label: 'Modo' },
         { id: 'legal', key: 'legal_nom', label: 'Legal' }
     ];
+
+
+    function toggleExpand(uniqueId) {
+    const container = document.getElementById(`cont_${uniqueId}`);
+    const btn = document.getElementById(`btn_${uniqueId}`);
+    
+    if (container.classList.contains('table-container-limit')) {
+        // Expandir
+        container.classList.remove('table-container-limit');
+        container.classList.add('table-container-full');
+        btn.innerHTML = `<i class="bi bi-chevron-up"></i> Ver menos`;
+    } else {
+        // Colapsar
+        container.classList.remove('table-container-full');
+        container.classList.add('table-container-limit');
+        btn.innerHTML = `<i class="bi bi-chevron-down"></i> Ver más`;
+    }
+}
+
+
+    function shareLink(params) {
+        console.log(dataFilterParamsLink)
+    }
 
     // Función Helper: Obtiene la data filtrada ignorando UN filtro específico.
     // Esto sirve para llenar las opciones del dropdown "Marca", considerando lo que elegiste en "Grupo",
@@ -890,7 +941,7 @@
     }
 
     function generarResumenReporte(totalRegistros) {
-    if (vista == 'maquina'){
+        if (vista !== 'maquina') return;
 
         // --- 1. PREPARAR TEXTO DE FILTROS ---
         let descripciones = [];
@@ -942,7 +993,8 @@
         const htmlResumenPaginado = `
             <div class="d-flex align-items-center justify-content-between w-100 py-1" style="font-size: 0.75rem;">
                 <div class="d-flex align-items-center" style="flex: 1; overflow: hidden; white-space: nowrap;">
-                    <button class="btn btn-dark btn-sm shadow-sm me-3 flex-shrink-0" onclick="abrirVistaDetalles()">Detalles</button>
+                    <button class="btn btn-dark btn-sm shadow-sm me-3 flex-shrink-0" onclick="abrirVistaDetalles()">Simple</button>
+                    <button class="btn btn-danger btn-sm shadow-sm me-3 flex-shrink-0" onclick="abrirVistaDetallesporsociedad()">Detallado</button>
                     <div class="text-truncate">
                         <span class="me-2">Total: (<b>${totalRegistros}</b>)</span>
                         <span class="me-2 text-muted">|</span>
@@ -992,7 +1044,10 @@
                 <tr><td colspan="16" class="bg-white border-top p-2">${contenedorBadges}</td></tr>
             `;
         }
-    }
+
+        const alertDetalles = document.getElementById('alertFiltrosDetalles');
+        //if (alertDetalles) alertDetalles.innerHTML = `<strong>Resumen:</strong> Máquinas ( <b>${totalRegistros}</b> ) | Filtros ( <b>${contadorCategorias}</b> ): ${textoDetalle}`;
+        if (alertDetalles) alertDetalles.innerHTML = `<strong>Resumen:</strong> Máquinas ( <b>${totalRegistros}</b> ) | Filtros ( <b>${contadorCategorias}</b> ): ${textoDetalle}`;
     }
 
     function cambiarPagina(delta) {
@@ -1008,7 +1063,17 @@
         generarResumenReporte(currentFiltered.length);
     }
     
-    function abrirVistaDetalles(isRefresh = false) {
+    async function abrirVistaDetalles(isRefresh = false) {
+
+        dataFilterParamsLink = {
+            filtros: {
+                ...estadoFiltros,
+                nombre:  ((document.getElementById('f-nombre')?.value).toLowerCase()) == "" ? [] :  [((document.getElementById('f-nombre')?.value).toLowerCase()) ],
+                serial:  ((document.getElementById('f-serial')?.value).toLowerCase()) == "" ? [] :  [((document.getElementById('f-serial')?.value).toLowerCase()) ],
+                view: ["simple"]
+            }
+        }
+
         if(!isRefresh) { 
             document.getElementById('section-lista').style.display = 'none'; 
             document.getElementById('section-detalles').style.display = 'block'; 
@@ -1034,7 +1099,7 @@
         cats.forEach((c, index) => {
             // 1. Datos
             const count = {}; 
-            currentFiltered.forEach(m => { 
+            currentFiltered.forEach(m => {
                 let l = (c.key === 'modelo_nom') ? `${m.modelo_nom || 'N/A'} (${m.marca_nom || 'N/A'})` : 
                         (c.key === 'sala_nom') ? `${m.sala_nom || 'N/A'} (${m.grupo_nom || 'N/A'})` : 
                         m[c.key] || 'N/A'; 
@@ -1093,33 +1158,262 @@
         });
     }
 
-    function toggleExpand(id) {
-        const container = document.getElementById(`cont_${id}`);
-        const btn = document.getElementById(`btn_${id}`);
-        
-        if (container.classList.contains('table-container-limit')) {
-            // ABRIR
-            container.classList.remove('table-container-limit');
-            container.classList.add('table-container-full');
-            btn.innerHTML = '<i class="bi bi-chevron-up"></i> Ver menos';
-            
-            // Guardamos en memoria que esta tarjeta está abierta
-            expandedCards.add(id);
-        } else {
-            // CERRAR
-            container.classList.remove('table-container-full');
-            container.classList.add('table-container-limit');
-            // Recuperamos el número total del badge para volver a ponerlo en el botón si quieres, 
-            // o dejamos el texto genérico para simplificar.
-            // Truco: leemos el número del badge del mismo card para ponerlo en el botón
-            const count = btn.closest('.card').querySelector('.badge-counter').innerText;
-            btn.innerHTML = `<i class="bi bi-chevron-down"></i> Ver todos (${count})`;
-            
-            // Borramos de memoria
-            expandedCards.delete(id);
+    function abrirVistaDetallesporsociedad(isRefresh = false) {
+
+        dataFilterParamsLink = {
+            filtros: {
+                ...estadoFiltros,
+                nombre:  ((document.getElementById('f-nombre')?.value).toLowerCase()) == "" ? [] :  [((document.getElementById('f-nombre')?.value).toLowerCase()) ],
+                serial:  ((document.getElementById('f-serial')?.value).toLowerCase()) == "" ? [] :  [((document.getElementById('f-serial')?.value).toLowerCase()) ],
+                view: ["detallado"]
+            }
         }
+
+    if(!isRefresh) { 
+        document.getElementById('section-lista').style.display = 'none'; 
+        document.getElementById('section-detalles').style.display = 'block'; 
+    }
+    
+    const cont = document.getElementById('containerTablasDetalles'); 
+    cont.innerHTML = "";
+
+    if (!currentFiltered || currentFiltered.length === 0) {
+        cont.innerHTML = '<div class="alert alert-info border-0 shadow-sm">No hay datos disponibles.</div>';
+        return;
     }
 
+    // --- A. TOTALES GLOBALES POR TIPO (Para la cabecera) ---
+    const tiposUnicos = [...new Set(currentFiltered.map(m => m.tipo_nom || 'Otros'))].sort();
+    const totalesGlobales = {};
+    tiposUnicos.forEach(t => {
+        totalesGlobales[t] = currentFiltered.filter(m => (m.tipo_nom || 'Otros') === t).length;
+    });
+
+    // --- B. AGRUPAR DATOS ---
+    const dataTree = {};
+    currentFiltered.forEach(m => {
+        const soc = m.sociedad_nom || 'N/A';
+        const sala = m.sala_nom || 'N/A';
+        const tipo = m.tipo_nom || 'Otros';
+
+        if (!dataTree[soc]) dataTree[soc] = { total: 0, salas: {} };
+        if (!dataTree[soc].salas[sala]) dataTree[soc].salas[sala] = { total: 0, tipos: {} };
+        
+        dataTree[soc].total++;
+        dataTree[soc].salas[sala].total++;
+        dataTree[soc].salas[sala].tipos[tipo] = (dataTree[soc].salas[sala].tipos[tipo] || 0) + 1;
+    });
+
+    // --- C. CONSTRUIR HTML ---
+    let html = `
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0 align-middle text-center" style="font-size: 0.75rem; border-color: #dee2e6;">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="text-uppercase text-secondary fw-bold" style="width: 18%;">Sociedad</th>
+                            <th class="text-uppercase text-secondary fw-bold" style="width: 22%;">Sala</th>
+                            ${tiposUnicos.map(t => `
+                                <th class="text-uppercase text-secondary fw-bold">
+                                    ${t} <span class="text-primary" style="font-size:0.65rem">(${totalesGlobales[t]})</span>
+                                </th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+    for (const soc in dataTree) {
+        const objSoc = dataTree[soc];
+        const listaSalas = Object.keys(objSoc.salas);
+        const socRowspan = listaSalas.length;
+
+        listaSalas.forEach((sala, index) => {
+            html += `<tr>`;
+
+            // Columna Sociedad + Ojito
+            if (index === 0) {
+                html += `
+                <td rowspan="${socRowspan}" class="fw-bold text-dark border-end bg-white">
+                    <div class="d-flex flex-column align-items-center justify-content-center">
+                        
+                        <div class="mt-1">
+                            <span>${soc}</span>
+                            <span class="text-muted" style="font-size: 0.7rem;">(Total: ${objSoc.total})</span>
+                            <button class="btn btn-link btn-sm p-0 ms-1 text-primary" onclick="verResumenSociedad('${soc}')" title="Ver detalle sociedad">
+                                <i class="bi bi-eye-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                </td>`;
+            }
+
+            // Columna Sala
+            const objSala = objSoc.salas[sala];
+            html += `
+            <td class="text-dark fw-semibold text-start ps-3">
+                ${sala} <span class="text-muted ms-1" style="font-size: 0.7rem;">(Total: ${objSala.total})</span>
+            </td>`;
+
+            // Columnas de Tipos + Ojito Individual
+            tiposUnicos.forEach(t => {
+                const cant = objSala.tipos[t] || 0;
+                const isZero = cant === 0;
+                const color = isZero ? '#e0e0e0' : '#212529';
+                
+                html += `
+                <td style="color: ${color}; ${!isZero ? 'font-weight: 700;' : ''}">
+                    ${cant}
+                    ${!isZero ? `
+                        <button class="btn btn-link btn-sm p-0 ms-1" style="font-size: 0.7rem; vertical-align: middle;" 
+                                onclick="verDetalleMaquinas('${soc}', '${sala}', '${t}')">
+                            <i class="bi bi-eye text-info"></i>
+                        </button>` : ''}
+                </td>`;
+            });
+
+            html += `</tr>`;
+        });
+    }
+
+    html += `</tbody></table></div></div></div>`;
+    cont.innerHTML = html;
+}
+
+// A. DETALLE POR SOCIEDAD (Totales por tipo)
+function verResumenSociedad(socNombre) {
+    const dataSoc = currentFiltered.filter(m => m.sociedad_nom === socNombre);
+    const conteo = {};
+    dataSoc.forEach(m => {
+        const t = m.tipo_nom || 'Otros';
+        conteo[t] = (conteo[t] || 0) + 1;
+    });
+
+    let tablaResumen = `<table class="table table-sm table-striped"><thead><tr><th>Tipo</th><th>Cantidad</th></tr></thead><tbody>`;
+    for(let t in conteo) {
+        tablaResumen += `<tr><td>${t}</td><td class="fw-bold">${conteo[t]}</td></tr>`;
+    }
+    tablaResumen += `</tbody></table>`;
+
+    mostrarModalGenerica(`Resumen: ${socNombre}`, tablaResumen);
+}
+
+
+
+function verDetalleMaquinas(soc, sala, tipo) {
+    const maquinas = currentFiltered.filter(m => 
+        (m.sociedad_nom === soc) && 
+        (m.sala_nom === sala) && 
+        ((m.tipo_nom || 'Otros') === tipo)
+    );
+
+    // 1. Agrupar por Marca y contar modelos individualmente
+    const marcasMap = {}; // { "Igt": { total: 0, modelos: { "ModeloA": 5, "ModeloB": 2 } } }
+
+    maquinas.forEach(m => {
+        const marca = m.marca_nom || 'N/A';
+        const modelo = m.modelo_nom || 'N/A';
+
+        if (!marcasMap[marca]) {
+            marcasMap[marca] = { total: 0, modelos: {} };
+        }
+        
+        // Sumar al total de la marca
+        marcasMap[marca].total++;
+        
+        // Sumar al conteo del modelo específico
+        marcasMap[marca].modelos[modelo] = (marcasMap[marca].modelos[modelo] || 0) + 1;
+    });
+
+    // 2. Generar el HTML de la Tabla por Marca
+    let htmlMarcas = `
+    <h6 class="text-primary fw-bold border-bottom pb-2 mt-3">TABLA POR MARCA Y MODELO</h6>
+    <table class="table table-sm border table-hover" style="font-size: 0.8rem;">
+        <thead class="table-light text-center">
+            <tr>
+                <th style="width: 30%;">MARCA (Cant.)</th>
+                <th style="width: 70%;">MODELOS (Cant.)</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    for (let mrc in marcasMap) {
+        const infoMarca = marcasMap[mrc];
+        
+        // Crear el string de modelos: "Modelo A (5), Modelo B (2)"
+        const listaModelos = Object.entries(infoMarca.modelos)
+            .map(([mod, cant]) => `<span class="badge border text-dark fw-normal bg-white">${mod} <b class="text-primary">(${cant})</b></span>`)
+            .join(' ');
+
+        htmlMarcas += `
+            <tr>
+                <td class="fw-bold bg-light ps-3">
+                    ${mrc} <span class="text-primary float-end me-2">(${infoMarca.total})</span>
+                </td>
+                <td class="ps-3 py-2">
+                    ${listaModelos}
+                </td>
+            </tr>`;
+    }
+    htmlMarcas += `</tbody></table>`;
+
+    // 3. Contadores secundarios (Reutilizamos tu lógica de mini tablas)
+    const generarMiniTabla = (titulo, key) => {
+        const counts = {};
+        maquinas.forEach(m => { counts[m[key] || 'N/A'] = (counts[m[key] || 'N/A'] || 0) + 1; });
+        let h = `<div class="col-md-4 mb-3">
+                    <table class="table table-bordered table-sm mb-0" style="font-size:0.7rem">
+                        <thead class="table-secondary"><tr><th colspan="2" class="text-center text-uppercase">${titulo}</th></tr></thead>
+                        <tbody>`;
+        for(let k in counts) h += `<tr><td class="ps-2">${k}</td><td class="fw-bold text-end pe-2 text-primary">${counts[k]}</td></tr>`;
+        return h + `</tbody></table></div>`;
+    };
+
+    let htmlContadores = `
+    <h6 class="text-primary fw-bold border-bottom pb-2 mt-4">DESGLOSE DE CARACTERÍSTICAS</h6>
+    <div class="row">
+        ${generarMiniTabla('JUEGOS', 'juego_nom')}
+        ${generarMiniTabla('ESTADOS', 'estado_nom')}
+        ${generarMiniTabla('VALORES', 'valor_nom')}
+        ${generarMiniTabla('MODOS', 'modo_nom')}
+        ${generarMiniTabla('LEGAL', 'legal_nom')}
+    </div>`;
+
+    mostrarModalGenerica(`Detalle: ${sala} - ${tipo}`, htmlMarcas + htmlContadores);
+}
+
+
+// C. FUNCIÓN AUXILIAR PARA ABRIR MODAL
+/* function mostrarModalGenerica(titulo, contenido) {
+    // Supone que tienes un modal con ID 'modalGeneral' en tu HTML
+    document.getElementById('modalGeneralLabel').innerHTML = titulo;
+    document.getElementById('modalGeneralBody').innerHTML = contenido;
+    
+    const myModal = new bootstrap.Modal(document.getElementById('modalGeneral'));
+    myModal.show();
+}
+ */
+
+ function mostrarModalGenerica(titulo, contenido) {
+    const el = document.getElementById('modalGeneral');
+    const label = document.getElementById('modalGeneralLabel');
+    const body = document.getElementById('modalGeneralBody');
+
+    // Verificamos que los elementos existan antes de usarlos
+    if (!el || !label || !body) {
+        console.error("Error: No se encontró la estructura del modal en el HTML.");
+        alert("Falta la estructura del modal en el HTML.");
+        return;
+    }
+
+    label.innerHTML = titulo;
+    body.innerHTML = contenido;
+    
+    let myModal = bootstrap.Modal.getInstance(el);
+    if (!myModal) {
+        myModal = new bootstrap.Modal(el);
+    }
+    myModal.show();
+}
     function cambiarVista(v) {
         
         vista = v; 
