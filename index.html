@@ -1340,6 +1340,7 @@
                             <i class="bi bi-eye"></i> Ver Detalle
                         </button>
                         <button onclick="solicitarEliminar(${i.id}, 'estadistica')" class="btn btn-outline-danger btn-action">Borrar</button>
+                        <button onclick="compartirEstadistica(${i.id}, this)" class="btn btn-outline-warning btn-action">COMPARTIR</button>
                     </div>
                 </td>
             </tr>`;
@@ -2240,6 +2241,34 @@
                 abrirFormulario(vista);
             }
         });
+
+        function compartirEstadistica(idEstadistica, btn) {
+            // Si no se pasa 'this' desde el HTML, intenta rescatarlo del evento
+            const boton = btn || (typeof event !== 'undefined' && event.target) || null;
+            const enlace = `${window.location.origin}/compartido.html?id=${idEstadistica}`;
+
+            navigator.clipboard.writeText(enlace).then(() => {
+                if (boton) {
+                    const textoOriginal = boton.innerHTML;
+                    const clasesOriginales = boton.className;
+
+                    // Cambiar a estado visual "Copiado"
+                    boton.innerHTML = '✅ ¡Copiado!';
+                    boton.classList.remove('btn-warning', 'btn-primary', 'btn-secondary');
+                    boton.classList.add('btn-success');
+                    boton.disabled = true;
+
+                    // Restaurar el botón después de 2 segundos
+                    setTimeout(() => {
+                        boton.innerHTML = textoOriginal;
+                        boton.className = clasesOriginales;
+                        boton.disabled = false;
+                    }, 2000);
+                }
+            }).catch(err => {
+                console.error("Error al copiar al portapapeles: ", err);
+            });
+        }
 
         // Funciones auxiliares blindadas para evitar errores
         function abrirFormulario(tipo) {

@@ -83,6 +83,56 @@ function procesarDatosMaquina(data, tipoNombre) {
 
 // --- RUTAS API ---
 
+app.get('/api/estadistica/detalle/:id', (req, res) => {
+    const { id } = req.params;
+
+    const sqlHeader = `
+        SELECT e.id, e.fecha, s.nombre as sucursal 
+        FROM estadistica_diaria e
+        LEFT JOIN sucursal s ON e.id_sucursal = s.id
+        WHERE e.id = ?
+    `;
+
+    db.query(sqlHeader, [id], (err, headerRows) => {
+        if (err || headerRows.length === 0) {
+            return res.status(404).json({ error: 'Estadística no encontrada' });
+        }
+
+        const sqlDetalle = `
+            SELECT id, id_estadistica, info_maquina, contador_entrada, contador_salida
+            FROM estadistica_maquina
+            WHERE id_estadistica = ?
+        `;
+
+        db.query(sqlDetalle, [id], (err, detalleRows) => {
+            if (err) {
+                return res.status(500).json({ error: 'Error al obtener el detalle' });
+            }
+
+            const maquinasFormateadas = detalleRows.map(row => {
+                let info = row.info_maquina;
+                if (typeof info === 'string') {
+                    try { info = JSON.parse(info); } catch (e) { info = {}; }
+                }
+
+                return {
+                    id: row.id,
+                    contador_entrada: row.contador_entrada,
+                    contador_salida: row.contador_salida,
+                    info_maquina: info, // Mandamos el objeto JSON completo
+                    nombre_maquina: info?.nombre || 'N/A',
+                    serial: info?.serial || 'S/N'
+                };
+            });
+
+            res.json({
+                header: headerRows[0],
+                maquinas: maquinasFormateadas
+            });
+        });
+    });
+});
+
 app.get('/api/sucursales_usuario', (req, res) => {
     const { userId } = req.query;
 
