@@ -2190,7 +2190,10 @@
             if (vistaActual === 'estadistica' || vistaActual === 'estadisticas' || vistaActual === 'estadistica_diaria') {
                 try {
                     const userIdParam = (typeof usuarioActual !== 'undefined' && usuarioActual?.id) ? `?userId=${usuarioActual.id}` : '';
-                    const res = await fetch(`${API}/sucursal${userIdParam}`);
+
+                    // CORREGIDO: Apuntamos al endpoint que filtra por usuario, 
+                    // o si prefieres mantener /api/sucursal, tendrías que modificar el router de Node.
+                    const res = await fetch(`${API}/sucursales_usuario${userIdParam}`);
                     const sucursales = await res.json();
 
                     const select = document.getElementById('est-sucursal');

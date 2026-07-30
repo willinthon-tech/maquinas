@@ -83,6 +83,32 @@ function procesarDatosMaquina(data, tipoNombre) {
 
 // --- RUTAS API ---
 
+app.get('/api/sucursales_usuario', (req, res) => {
+    const { userId } = req.query;
+
+    // Validamos que de verdad venga el ID del usuario
+    if (!userId || userId === 'undefined') {
+        return res.status(400).json({ error: 'Falta el userId para buscar sus sucursales' });
+    }
+
+    // Armamos la consulta cruzando la sucursal con la tabla pivote
+    const sql = `
+        SELECT s.*, g.nombre as grupo_nom 
+        FROM sucursal s 
+        LEFT JOIN grupo g ON s.grupo_id = g.id
+        INNER JOIN usuario_sucursal us ON s.id = us.sucursal_id 
+        WHERE us.usuario_id = ${mysql.escape(userId)}
+        ORDER BY s.nombre
+    `;
+
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error("Error SQL Sucursales por Usuario:", err.message);
+            return res.status(500).send(err.message);
+        }
+        res.json(results);
+    });
+});
 
 app.post('/api/crear_estadistica', async (req, res) => {
     try {
@@ -168,13 +194,42 @@ app.post('/api/crear_estadistica', async (req, res) => {
 });
 
 // GET: Listar las estadísticas maestras
-app.get('/api/estadistica', (req, res) => {
+/* app.get('/api/estadistica', (req, res) => {
     const sql = `
         SELECT e.id, e.fecha, s.nombre as sucursal 
         FROM estadistica_diaria e
         LEFT JOIN sucursal s ON e.id_sucursal = s.id
         ORDER BY e.fecha DESC
     `;
+    db.query(sql, (err, rows) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Error obteniendo las estadísticas' });
+        }
+        res.json(rows);
+    });
+}); */
+
+app.get('/api/estadistica', (req, res) => {
+    // 1. Extraemos el userId igual que en tu otro endpoint
+    const { userId } = req.query;
+
+    // 2. Armamos la base de la consulta
+    let sql = `
+        SELECT e.id, e.fecha, s.nombre as sucursal 
+        FROM estadistica_diaria e
+        LEFT JOIN sucursal s ON e.id_sucursal = s.id
+    `;
+
+    // 3. Aplicamos TU misma validación para filtrar por la tabla pivote
+    if (userId && userId !== 'undefined') {
+        sql += ` INNER JOIN usuario_sucursal us ON e.id_sucursal = us.sucursal_id WHERE us.usuario_id = ${mysql.escape(userId)}`;
+    }
+
+    // 4. Le pegamos el ORDER BY al final
+    sql += ` ORDER BY e.fecha DESC`;
+
+    // 5. Ejecutamos
     db.query(sql, (err, rows) => {
         if (err) {
             console.error(err);
