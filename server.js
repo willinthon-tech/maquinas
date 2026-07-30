@@ -35,9 +35,9 @@ db.connect((err) => {
 // CONFIGURACIÓN DE BASE DE DATOS (CON POOL DE CONEXIONES)
 const db = mysql.createPool({
     host: 'localhost',
-    user: 'root',      
-    password: '$0p0rt3R0y',      
-    //password: '',      
+    user: 'root',
+    password: '$0p0rt3R0y',
+    //password: '',
     database: 'sistema_maquinas',
     waitForConnections: true,
     connectionLimit: 10, // Mantiene hasta 10 conexiones abiertas listas para usar
@@ -59,7 +59,7 @@ db.getConnection((err, connection) => {
 
 function procesarDatosMaquina(data, tipoNombre) {
     let limpio = { ...data };
-    
+
     // Serial N/A
     if (!limpio.serial || limpio.serial.trim() === "" || limpio.serial.toUpperCase() === "N/A") {
         limpio.serial = "N/A";
@@ -67,7 +67,7 @@ function procesarDatosMaquina(data, tipoNombre) {
 
     // Validación estricta de puestos según el nombre del tipo
     const tNombre = tipoNombre ? tipoNombre.toUpperCase() : "";
-    
+
     if (tNombre === "NORMAL") {
         limpio.puestos = 1;
     } else if (tNombre === "MULTIPUESTO") {
@@ -77,11 +77,216 @@ function procesarDatosMaquina(data, tipoNombre) {
         limpio.puestos = parseInt(limpio.puestos) || 1;
         if (limpio.puestos < 1) limpio.puestos = 1;
     }
-    
+
     return limpio;
 }
 
 // --- RUTAS API ---
+
+
+app.post('/api/crear_estadistica', async (req, res) => {
+    try {
+        const { sucursal_id, fecha } = req.body;
+
+        if (!sucursal_id || !fecha) {
+            return res.status(400).json({ error: "La sucursal y la fecha son obligatorias." });
+        }
+
+        // 1. Insertar la cabecera en 'estadistica_diaria'
+        const [resultEstadistica] = await db.promise().query(
+            'INSERT INTO estadistica_diaria (id_sucursal, fecha) VALUES (?, ?)',
+            [sucursal_id, fecha]
+        );
+
+        const estadisticaId = resultEstadistica.insertId;
+
+        // 2. Consultar las máquinas trayendo también el ID de la marca desde el modelo
+        const [maquinas] = await db.promise().query(`
+            SELECT 
+                m.*,
+                t.nombre AS tipo_nombre,
+                mo.nombre AS modelo_nombre,
+                mo.marca_id AS marca_id,      -- <- Traemos el ID de la marca desde la tabla modelo
+                mar.nombre AS marca_nombre,    -- <- Traemos el nombre de la marca
+                v.nombre AS valor_nombre,
+                e.nombre AS estado_nombre,
+                s.nombre AS sociedad_nombre,
+                j.nombre AS juego_nombre,
+                mod_p.nombre AS modo_nombre,
+                suc.nombre AS sucursal_nombre
+            FROM maquina m
+            LEFT JOIN tipo t ON m.tipo_id = t.id
+            LEFT JOIN modelo mo ON m.modelo_id = mo.id
+            LEFT JOIN marca mar ON mo.marca_id = mar.id 
+            LEFT JOIN valor v ON m.valor_id = v.id
+            LEFT JOIN estado e ON m.estado_id = e.id
+            LEFT JOIN sociedad s ON m.sociedad_id = s.id
+            LEFT JOIN juego j ON m.juego_id = j.id
+            LEFT JOIN modo mod_p ON m.modo_id = mod_p.id
+            LEFT JOIN sucursal suc ON m.sucursal_id = suc.id
+            WHERE m.sucursal_id = ?
+        `, [sucursal_id]);
+
+        // 3. Insertar cada máquina con el snapshot JSON con todas sus propiedades normalizadas como objetos
+        if (maquinas && maquinas.length > 0) {
+            for (const maq of maquinas) {
+                const infoCompleta = {
+                    id: maq.id,
+                    nombre: maq.nombre,
+                    serial: maq.serial,
+                    puestos: maq.puestos,
+                    marca: { id: maq.marca_id, nombre: maq.marca_nombre || "N/A" }, // <- Ahora como objeto { id, nombre }
+                    modelo: { id: maq.modelo_id, nombre: maq.modelo_nombre },
+                    tipo: { id: maq.tipo_id, nombre: maq.tipo_nombre },
+                    valor: { id: maq.valor_id, nombre: maq.valor_nombre },
+                    estado: { id: maq.estado_id, nombre: maq.estado_nombre },
+                    sociedad: { id: maq.sociedad_id, nombre: maq.sociedad_nombre },
+                    juego: { id: maq.juego_id, nombre: maq.juego_nombre },
+                    modo: { id: maq.modo_id, nombre: maq.modo_nombre },
+                    sucursal: { id: maq.sucursal_id, nombre: maq.sucursal_nombre }
+                };
+
+                await db.promise().query(
+                    `INSERT INTO estadistica_maquina 
+                    (id_estadistica, info_maquina, contador_entrada, contador_salida) 
+                    VALUES (?, ?, 0, 0)`,
+                    [estadisticaId, JSON.stringify(infoCompleta)]
+                );
+            }
+        }
+
+        return res.json({
+            success: true,
+            message: "Estadística creada con éxito y marca formateada como objeto",
+            estadisticaId
+        });
+
+    } catch (error) {
+        console.error("Error al crear estadística:", error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// GET: Listar las estadísticas maestras
+app.get('/api/estadistica', (req, res) => {
+    const sql = `
+        SELECT e.id, e.fecha, s.nombre as sucursal 
+        FROM estadistica_diaria e
+        LEFT JOIN sucursal s ON e.id_sucursal = s.id
+        ORDER BY e.fecha DESC
+    `;
+    db.query(sql, (err, rows) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Error obteniendo las estadísticas' });
+        }
+        res.json(rows);
+    });
+});
+
+// GET: Obtener el detalle con JOIN para ver el nombre de la máquina
+app.get('/api/detalle_estadistica/:id_estadistica', (req, res) => {
+    const { id_estadistica } = req.params;
+    const sql = `
+        SELECT em.id, em.contador_entrada, em.contador_salida, m.nombre as nombre_maquina 
+        FROM estadistica_maquina em
+        JOIN maquina m ON em.id_maquina = m.id
+        WHERE em.id_estadistica = ?
+    `;
+    db.query(sql, [id_estadistica], (err, detalle) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Error obteniendo detalle' });
+        }
+        res.json(detalle);
+    });
+});
+
+app.delete('/api/estadistica/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Borrar los registros hijos en 'estadistica_maquina' usando el wrapper de promesas
+        await db.promise().query(
+            'DELETE FROM estadistica_maquina WHERE id_estadistica = ?',
+            [id]
+        );
+
+        // 2. Borrar la cabecera en 'estadistica_diaria' usando el wrapper de promesas
+        const [result] = await db.promise().query(
+            'DELETE FROM estadistica_diaria WHERE id = ?',
+            [id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Estadística no encontrada" });
+        }
+
+        return res.json({
+            success: true,
+            message: "Estadística eliminada con éxito"
+        });
+
+    } catch (error) {
+        console.error("Error al eliminar la estadística:", error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+
+app.get('/api/estadistica/:id/detalles', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Consultar la cabecera (Fecha y Sucursal)
+        const [cabecera] = await db.promise().query(
+            `SELECT ed.fecha, s.nombre AS sucursal_nombre 
+             FROM estadistica_diaria ed
+             LEFT JOIN sucursal s ON ed.id_sucursal = s.id
+             WHERE ed.id = ?`,
+            [id]
+        );
+
+        // 2. Consultar las máquinas de la estadística
+        const [detalles] = await db.promise().query(
+            `SELECT id, id_estadistica, info_maquina, contador_entrada, contador_salida 
+             FROM estadistica_maquina 
+             WHERE id_estadistica = ?`,
+            [id]
+        );
+
+        return res.json({
+            success: true,
+            estadistica: cabecera[0] || { fecha: '', sucursal_nombre: '' },
+            detalles
+        });
+    } catch (error) {
+        console.error("Error al obtener detalles de estadística:", error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// Endpoint para actualizar los contadores de una máquina específica en la estadística
+app.put('/api/estadistica_maquina/:id/contadores', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { contador_entrada, contador_salida } = req.body;
+
+        await db.promise().query(
+            `UPDATE estadistica_maquina 
+             SET contador_entrada = ?, contador_salida = ? 
+             WHERE id = ?`,
+            [contador_entrada, contador_salida, id]
+        );
+
+        return res.json({ success: true, message: "Contadores actualizados correctamente" });
+    } catch (error) {
+        console.error("Error al actualizar contadores:", error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+
 
 app.post('/api/login', (req, res) => {
     const { usuario, clave } = req.body;
@@ -114,7 +319,7 @@ app.get('/api/permisos_sucursal/:id', (req, res) => {
 });
 
 app.post('/api/asignar_sucursales', (req, res) => {
-    const { usuario_id, sucursales } = req.body; 
+    const { usuario_id, sucursales } = req.body;
     db.query("DELETE FROM usuario_sucursal WHERE usuario_id = ?", [usuario_id], (err) => {
         if (err) return res.status(500).send("Error limpiar");
         if (!sucursales || sucursales.length === 0) return res.json({ message: "Permisos eliminados." });
@@ -158,8 +363,8 @@ app.get('/api/options/:tabla', (req, res) => {
 
 app.get('/api/references/all', async (req, res) => {
     const tablas = [
-        'grupo', 'sucursal', 'marca', 'modelo', 
-        'juego', 'estado', 'sociedad', 'valor', 
+        'grupo', 'sucursal', 'marca', 'modelo',
+        'juego', 'estado', 'sociedad', 'valor',
         'tipo', 'modo', 'legal'
     ];
     try {
@@ -188,7 +393,7 @@ app.get('/api/:tabla', (req, res) => {
         // Añadimos s.pianas_xl a la consulta
         const sql = "SELECT s.id, s.nombre, s.grupo_id, s.pianas, s.pianas_xl, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY s.nombre";
         //const sql = "SELECT s.id, s.nombre, s.grupo_id, s.pianas, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id ORDER BY s.nombre";
-        
+
         // CORRECCIÓN: Quitamos el 'return' de aquí abajo. 
         // Solo ejecutamos db.query y dejamos que el callback responda.
         db.query(sql, (err, results) => {
@@ -223,12 +428,12 @@ app.get('/api/:tabla', (req, res) => {
             LEFT JOIN tipo t ON m.tipo_id = t.id
             LEFT JOIN modo md ON m.modo_id = md.id
             LEFT JOIN legal l ON m.legal_id = l.id`;
-        if (userId && userId !== 'undefined') { 
-            sql += ` INNER JOIN usuario_sucursal us ON m.sucursal_id = us.sucursal_id WHERE us.usuario_id = ${mysql.escape(userId)}`; 
+        if (userId && userId !== 'undefined') {
+            sql += ` INNER JOIN usuario_sucursal us ON m.sucursal_id = us.sucursal_id WHERE us.usuario_id = ${mysql.escape(userId)}`;
         }
     } else if (tabla === 'sucursal') {
         sql = "SELECT s.*, g.nombre as grupo_nom FROM sucursal s LEFT JOIN grupo g ON s.grupo_id = g.id";
-    } else if (tabla === 'modelo') { 
+    } else if (tabla === 'modelo') {
         sql = "SELECT m.*, ma.nombre as marca_nom FROM modelo m LEFT JOIN marca ma ON m.marca_id = ma.id";
     } else {
         sql = `SELECT * FROM ${tabla}`;
