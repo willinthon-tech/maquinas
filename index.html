@@ -1246,6 +1246,7 @@
         } */
 
         function renderizarTabla(data) {
+
             const titles = document.getElementById('tHeadTitles'), body = document.getElementById('tBody');
             const esEstadistica = (vista === 'estadistica' || vista === 'estadisticas');
 
@@ -1337,10 +1338,10 @@
                 <td class="text-center">
                     <div class="d-flex justify-content-center gap-1">
                         <button onclick="verDetalleEstadistica(${i.id})" class="btn btn-outline-primary btn-action">
-                            <i class="bi bi-eye"></i> Ver Detalle
+                            Contadores
                         </button>
                         <button onclick="solicitarEliminar(${i.id}, 'estadistica')" class="btn btn-outline-danger btn-action">Borrar</button>
-                        <button onclick="compartirEstadistica(${i.id}, this)" class="btn btn-outline-warning btn-action">COMPARTIR</button>
+                        <button onclick="compartirEstadistica(${i.id}, this)" class="btn btn-outline-warning btn-action">Compartir</button>
                     </div>
                 </td>
             </tr>`;
@@ -1532,8 +1533,33 @@
                 const fechaFormateada = partesFecha.length === 3 ? `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}` : rawFecha;
                 const nombreSala = data.estadistica.sucursal_nombre || 'N/A';
 
+                // Calcular el total usando .reduce()
+                const totalProduccion = data.detalles.reduce((acc, item) => {
+                    const maq = typeof item.info_maquina === 'string' ? JSON.parse(item.info_maquina) : (item.info_maquina || {});
+
+                    const creditos = parseInt(item.contador_entrada) - parseInt(item.contador_salida);
+                    const valorNom = parseFloat(maq.valor.nombre);
+
+                    // Es una multiplicación (*), igual que en tus filas
+                    const resultadoMaq = creditos * valorNom;
+
+                    return acc + resultadoMaq;
+                }, 0);
+
+                // Formatear a 3 decimales (o los que necesites) y reemplazar el punto por coma
+                const produccionFormateada = parseFloat(totalProduccion).toLocaleString('es-ES');
+
                 document.getElementById('alertFiltrosDetalles').innerHTML =
-                    `<i class="bi bi-calendar-event"></i> Fecha: ${fechaFormateada} &nbsp;&nbsp;|&nbsp;&nbsp; <i class="bi bi-building"></i> Sala: ${nombreSala}`;
+                    `<i class="bi bi-calendar-event"></i> Fecha: ${fechaFormateada} &nbsp;&nbsp;|&nbsp;&nbsp; <i class="bi bi-building"></i> Sala: ${nombreSala} |&nbsp;&nbsp; Produccion: ${produccionFormateada}`;
+
+                // Función auxiliar inteligente para extraer texto o propiedades anidadas de objetos
+                function extraerTexto(val) {
+                    if (val === null || val === undefined) return '-';
+                    if (typeof val === 'object') {
+                        return val.nombre || val.name || val.descripcion || val.label || val.valor || '-';
+                    }
+                    return val;
+                }
 
                 let htmlTabla = `
             <div class="col-12">
@@ -1543,9 +1569,10 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>ID REGISTRO</th>
-                                    <th>NOMBRE DE MÁQUINA</th>
-                                    <th>CONTADOR ENTRADA</th>
-                                    <th>CONTADOR SALIDA</th>
+                                    <th>MAQUINA</th>
+                                    <th>INFO</th>
+                                    <th>CONTADORES</th>
+                                    <th>PRODUCCION</th>
                                     <th class="text-center">ACCIONES</th>
                                 </tr>
                             </thead>
@@ -1553,24 +1580,41 @@
         `;
 
                 if (data.detalles.length === 0) {
-                    htmlTabla += `<tr><td colspan="5" class="text-center p-3">No hay máquinas registradas.</td></tr>`;
+                    htmlTabla += `<tr><td colspan="6" class="text-center p-3">No hay máquinas registradas.</td></tr>`;
                 } else {
                     data.detalles.forEach(item => {
-                        const maq = typeof item.info_maquina === 'string' ? JSON.parse(item.info_maquina) : item.info_maquina;
+                        const maq = typeof item.info_maquina === 'string' ? JSON.parse(item.info_maquina) : (item.info_maquina || {});
+
+                        // Extraemos el valor intentando varias opciones comunes de la estructura
+                        const valorBruto = maq.valor_nom || maq.valor || item.valor;
+                        const valorMaquina = extraerTexto(valorBruto);
+                        const nombreMaq = extraerTexto(maq.nombre) !== '-' ? extraerTexto(maq.nombre) : (maq.nombre_maquina || 'N/A');
+                        const serialMaq = extraerTexto(maq.serial) !== '-' ? extraerTexto(maq.serial) : 'N/A';
+                        const sociedadMaq = extraerTexto(maq.sociedad) !== '-' ? extraerTexto(maq.sociedad) : 'N/A';
 
                         htmlTabla += `
                     <tr>
                         <td>${item.id}</td>
-                        <td><strong>${maq.nombre || 'N/A'}</strong> <br><small class="text-muted">Serial: ${maq.serial || 'N/A'}</small></td>
-                        <td>${item.contador_entrada}</td>
-                        <td>${item.contador_salida}</td>
+                        <td>
+                            <small class="text-muted">Nombre: ${nombreMaq}</small> <br> 
+                            <small class="text-muted">Serial: ${serialMaq}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">Valor: ${valorMaquina}</small> <br> 
+                            <small class="text-muted">Sociedad: ${sociedadMaq}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">Entrada: ${item.contador_entrada}</small> <br> 
+                            <small class="text-muted">Salida: ${item.contador_salida}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">Creditos: ${(parseInt(item.contador_entrada) - parseInt(item.contador_salida))}</small> <br> 
+                            <small class="text-muted">Valor: ${((parseInt(item.contador_entrada) - parseInt(item.contador_salida)) * parseFloat(valorMaquina)).toLocaleString('es-ES')}</small>
+                        </td>
                         <td class="text-center">
                             <div class="d-flex justify-content-center gap-1">
-                                <button class="btn btn-outline-info btn-action btn-sm" onclick='verInfoCompleta(${JSON.stringify(maq)})'>
-                                    <i class="bi bi-eye"></i> Ver Info
-                                </button>
                                 <button class="btn btn-outline-warning btn-action btn-sm text-dark fw-bold" onclick="abrirModalContadores(${item.id}, ${item.contador_entrada}, ${item.contador_salida})">
-                                    <i class="bi bi-pencil"></i> Contadores
+                                    Contadores
                                 </button>
                             </div>
                         </td>

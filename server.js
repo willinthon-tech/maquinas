@@ -260,6 +260,33 @@ app.post('/api/crear_estadistica', async (req, res) => {
     });
 }); */
 
+
+app.get('/api/estadisticas', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT 
+                e.id,
+                e.fecha,
+                s.nombre AS sucursal,
+                -- Aquí calcula la producción usando el ID de cada estadística diaria
+                COALESCE(SUM(
+                    (d.contador_entrada - d.contador_salida) * 
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(d.info_maquina, '$.valor.nombre')) AS DECIMAL(10,3))
+                ), 0) AS total_produccion
+            FROM estadisticas e
+            LEFT JOIN sucursales s ON e.sucursal_id = s.id
+            LEFT JOIN estadistica_maquina d ON e.id = d.estadistica_id
+            GROUP BY e.id, e.fecha, s.nombre
+            ORDER BY e.fecha DESC
+        `);
+
+        res.json(rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Error al obtener estadísticas" });
+    }
+});
+
 app.get('/api/estadistica', (req, res) => {
     // 1. Extraemos el userId igual que en tu otro endpoint
     const { userId } = req.query;

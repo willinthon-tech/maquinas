@@ -7,40 +7,45 @@
     <title>Vista Compartida - Contadores</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
 
 <body class="bg-light">
 
     <div class="container my-4">
-        <h2 class="mb-4">Contadores Estadistica</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Contadores</h2>
+        </div>
 
-        <!-- Cabecera informativa -->
-        <div class="alert alert-primary d-flex align-items-center" role="alert">
-            <div>
-                📅 <strong>Fecha:</strong> <span id="lbl-fecha">-</span> &nbsp;&nbsp;|&nbsp;&nbsp;
-                🏢 <strong>Sala:</strong> <span id="lbl-sucursal">-</span>
-            </div>
+        <!-- Cabecera informativa con producción total -->
+        <div class="alert alert-primary d-flex align-items-center" role="alert" id="alertFiltrosDetalles">
+            <i class="bi bi-calendar-event"></i> Fecha: - &nbsp;&nbsp;|&nbsp;&nbsp; <i class="bi bi-building"></i> Sala:
+            - |&nbsp;&nbsp; Produccion: 0
         </div>
 
         <!-- Tabla de Contadores -->
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-striped mb-0 align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>ID REGISTRO</th>
-                            <th>NOMBRE DE MÁQUINA</th>
-                            <th>CONTADOR ENTRADA</th>
-                            <th>CONTADOR SALIDA</th>
-                            <th class="text-end">ACCIONES</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-maquinas">
-                        <tr>
-                            <td colspan="5" class="text-center py-4">Cargando datos...</td>
-                        </tr>
-                    </tbody>
-                </table>
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID REGISTRO</th>
+                                <th>MAQUINA</th>
+                                <th>INFO</th>
+                                <th>CONTADORES</th>
+                                <th>PRODUCCION</th>
+                                <th class="text-center">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-maquinas">
+                            <tr>
+                                <td colspan="6" class="text-center py-4">Cargando datos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -70,6 +75,15 @@
         const API = window.location.origin;
         let maquinasGlobal = [];
 
+        // Función auxiliar inteligente para extraer texto o propiedades anidadas de objetos
+        function extraerTexto(val) {
+            if (val === null || val === undefined) return '-';
+            if (typeof val === 'object') {
+                return val.nombre || val.name || val.descripcion || val.label || val.valor || '-';
+            }
+            return val;
+        }
+
         async function cargarDatosCompartidos() {
             const params = new URLSearchParams(window.location.search);
             const id = params.get('id');
@@ -84,44 +98,84 @@
                 if (!res.ok) throw new Error("No se pudo cargar la información.");
 
                 const data = await res.json();
-                maquinasGlobal = data.maquinas;
+                maquinasGlobal = data.maquinas || data.detalles || [];
 
-                // Pintar cabecera
-                //document.getElementById('lbl-fecha').textContent = data.header.fecha;
-                document.getElementById('lbl-fecha').textContent = data.header.fecha ? data.header.fecha.split('T')[0] : '-';
-                document.getElementById('lbl-sucursal').textContent = data.header.sucursal;
+                // Formatear fecha
+                const rawFecha = data.header?.fecha ? data.header.fecha.split('T')[0] : '';
+                const partesFecha = rawFecha ? rawFecha.split('-') : [];
+                const fechaFormateada = partesFecha.length === 3 ? `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}` : rawFecha;
+                const nombreSala = data.header?.sucursal || data.header?.sucursal_nombre || 'N/A';
 
+                // Calcular el total usando .reduce() idéntico al panel principal
+                const totalProduccion = maquinasGlobal.reduce((acc, item) => {
+                    const maq = typeof item.info_maquina === 'string' ? JSON.parse(item.info_maquina) : (item.info_maquina || {});
 
+                    const creditos = parseInt(item.contador_entrada || 0) - parseInt(item.contador_salida || 0);
+                    const valorBruto = maq.valor_nom || maq.valor || item.valor || 1;
+                    const valorNom = parseFloat(extraerTexto(valorBruto)) || 1;
+
+                    const resultadoMaq = creditos * valorNom;
+                    return acc + resultadoMaq;
+                }, 0);
+
+                const produccionFormateada = parseFloat(totalProduccion).toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+
+                // Pintar cabecera informativa
+                document.getElementById('alertFiltrosDetalles').innerHTML =
+                    `<i class="bi bi-calendar-event"></i> Fecha: ${fechaFormateada} &nbsp;&nbsp;|&nbsp;&nbsp; <i class="bi bi-building"></i> Sala: ${nombreSala} |&nbsp;&nbsp; Produccion: ${produccionFormateada}`;
 
                 const tbody = document.getElementById('tabla-maquinas');
                 tbody.innerHTML = '';
 
-                if (!data.maquinas || data.maquinas.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3">No hay máquinas registradas.</td></tr>`;
+                if (maquinasGlobal.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4">No hay máquinas registradas.</td></tr>`;
                     return;
                 }
 
-                data.maquinas.forEach((m, index) => {
+                maquinasGlobal.forEach((item, index) => {
+                    const maq = typeof item.info_maquina === 'string' ? JSON.parse(item.info_maquina) : (item.info_maquina || {});
+
+                    const valorBruto = maq.valor_nom || maq.valor || item.valor;
+                    const valorMaquina = extraerTexto(valorBruto);
+                    const nombreMaq = extraerTexto(maq.nombre) !== '-' ? extraerTexto(maq.nombre) : (item.nombre_maquina || 'N/A');
+                    const serialMaq = extraerTexto(maq.serial) !== '-' ? extraerTexto(maq.serial) : (item.serial || 'N/A');
+                    const sociedadMaq = extraerTexto(maq.sociedad) !== '-' ? extraerTexto(maq.sociedad) : 'N/A';
+
+                    const creditosMaq = parseInt(item.contador_entrada || 0) - parseInt(item.contador_salida || 0);
+                    const valorTotalMaq = creditosMaq * (parseFloat(valorMaquina) || 1);
+
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${m.id}</td>
+                        <td>${item.id}</td>
                         <td>
-                            <strong>${m.nombre_maquina || 'N/A'}</strong><br>
-                            <small class="text-muted">Serial: ${m.serial || 'S/N'}</small>
+                            <small class="text-muted">Nombre: ${nombreMaq}</small> <br> 
+                            <small class="text-muted">Serial: ${serialMaq}</small>
                         </td>
-                        <td>${m.contador_entrada || 0}</td>
-                        <td>${m.contador_salida || 0}</td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-outline-info" onclick="verInfoMaquina(${index})">
-                                Ver Info
-                            </button>
+                        <td>
+                            <small class="text-muted">Valor: ${valorMaquina}</small> <br> 
+                            <small class="text-muted">Sociedad: ${sociedadMaq}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">Entrada: ${item.contador_entrada || 0}</small> <br> 
+                            <small class="text-muted">Salida: ${item.contador_salida || 0}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">Creditos: ${creditosMaq}</small> <br> 
+                            <small class="text-muted">Valor: ${valorTotalMaq.toLocaleString('es-ES')}</small>
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center gap-1">
+                                <button class="btn btn-outline-warning btn-action btn-sm text-dark fw-bold" onclick="verInfoMaquina(${index})">
+                                    Info Maquina
+                                </button>
+                            </div>
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
 
             } catch (error) {
-                console.error(error);
+                console.error("Error de red:", error);
                 alert("Error cargando los datos compartidos.");
             }
         }
@@ -132,7 +186,6 @@
 
             const info = m.info_maquina || {};
 
-            // Función auxiliar para extraer texto si es objeto o string
             function txt(val) {
                 if (val === null || val === undefined) return 'N/A';
                 if (typeof val === 'object') {
