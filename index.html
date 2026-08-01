@@ -1512,7 +1512,6 @@
         // Variable global para recordar qué estadística estamos viendo actualmente
         let idEstadisticaActual = null;
 
-        // Modificamos ligeramente la función verDetalleEstadistica para capturar el ID actual
         async function verDetalleEstadistica(idEstadistica) {
             idEstadisticaActual = idEstadistica; // Guardamos el ID aquí
             try {
@@ -1533,26 +1532,8 @@
                 const fechaFormateada = partesFecha.length === 3 ? `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}` : rawFecha;
                 const nombreSala = data.estadistica.sucursal_nombre || 'N/A';
 
-                // Calcular el total usando .reduce()
-                const totalProduccion = data.detalles.reduce((acc, item) => {
-                    const maq = typeof item.info_maquina === 'string' ? JSON.parse(item.info_maquina) : (item.info_maquina || {});
-
-                    const creditos = parseInt(item.contador_entrada) - parseInt(item.contador_salida);
-                    const valorNom = parseFloat(maq.valor.nombre);
-
-                    // Es una multiplicación (*), igual que en tus filas
-                    const resultadoMaq = creditos * valorNom;
-
-                    return acc + resultadoMaq;
-                }, 0);
-
-                // Formatear a 3 decimales (o los que necesites) y reemplazar el punto por coma
-                const produccionFormateada = parseFloat(totalProduccion).toLocaleString('es-ES');
-
-                document.getElementById('alertFiltrosDetalles').innerHTML =
-                    `<i class="bi bi-calendar-event"></i> Fecha: ${fechaFormateada} &nbsp;&nbsp;|&nbsp;&nbsp; <i class="bi bi-building"></i> Sala: ${nombreSala} |&nbsp;&nbsp; Produccion: ${produccionFormateada}`;
-
                 // Función auxiliar inteligente para extraer texto o propiedades anidadas de objetos
+                // Se coloca aquí arriba para que pueda usarse en el total y en el detalle sin fallos
                 function extraerTexto(val) {
                     if (val === null || val === undefined) return '-';
                     if (typeof val === 'object') {
@@ -1561,22 +1542,45 @@
                     return val;
                 }
 
+                // Calcular el total usando .reduce() con validación estricta contra NaN
+                const totalProduccion = data.detalles.reduce((acc, item) => {
+                    const maq = typeof item.info_maquina === 'string' ? JSON.parse(item.info_maquina) : (item.info_maquina || {});
+
+                    const creditos = parseInt(item.contador_entrada || 0) - parseInt(item.contador_salida || 0);
+
+                    const valorBruto = maq.valor_nom || maq.valor || item.valor || 0;
+                    const textoValor = extraerTexto(valorBruto);
+
+                    // Si el valor no es numérico, lo forzamos a 0
+                    const valorNom = !isNaN(textoValor) ? parseFloat(textoValor) : 0;
+
+                    const resultadoMaq = creditos * valorNom;
+
+                    return acc + (isNaN(resultadoMaq) ? 0 : resultadoMaq);
+                }, 0);
+
+                // Formatear producción total
+                const produccionFormateada = (isNaN(totalProduccion) ? 0 : parseFloat(totalProduccion)).toLocaleString('es-ES');
+
+                document.getElementById('alertFiltrosDetalles').innerHTML =
+                    `<i class="bi bi-calendar-event"></i> Fecha: ${fechaFormateada} &nbsp;&nbsp;|&nbsp;&nbsp; <i class="bi bi-building"></i> Sala: ${nombreSala} |&nbsp;&nbsp; Produccion: ${produccionFormateada}`;
+
                 let htmlTabla = `
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-body p-0">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>ID REGISTRO</th>
-                                    <th>MAQUINA</th>
-                                    <th>INFO</th>
-                                    <th>CONTADORES</th>
-                                    <th>PRODUCCION</th>
-                                    <th class="text-center">ACCIONES</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID REGISTRO</th>
+                            <th>MAQUINA</th>
+                            <th>INFO</th>
+                            <th>CONTADORES</th>
+                            <th>PRODUCCION</th>
+                            <th class="text-center">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
 
                 if (data.detalles.length === 0) {
@@ -1585,50 +1589,58 @@
                     data.detalles.forEach(item => {
                         const maq = typeof item.info_maquina === 'string' ? JSON.parse(item.info_maquina) : (item.info_maquina || {});
 
-                        // Extraemos el valor intentando varias opciones comunes de la estructura
                         const valorBruto = maq.valor_nom || maq.valor || item.valor;
                         const valorMaquina = extraerTexto(valorBruto);
                         const nombreMaq = extraerTexto(maq.nombre) !== '-' ? extraerTexto(maq.nombre) : (maq.nombre_maquina || 'N/A');
                         const serialMaq = extraerTexto(maq.serial) !== '-' ? extraerTexto(maq.serial) : 'N/A';
                         const sociedadMaq = extraerTexto(maq.sociedad) !== '-' ? extraerTexto(maq.sociedad) : 'N/A';
 
+                        // Realizamos los cálculos por separado para mantener el HTML limpio
+                        const entrada = parseInt(item.contador_entrada || 0);
+                        const salida = parseInt(item.contador_salida || 0);
+                        const creditosMaq = entrada - salida;
+
+                        // Validación para la fila: Si no es número, multiplica por 0
+                        const numValorMaq = !isNaN(valorMaquina) ? parseFloat(valorMaquina) : 0;
+                        const valorTotalMaq = creditosMaq * numValorMaq;
+
                         htmlTabla += `
-                    <tr>
-                        <td>${item.id}</td>
-                        <td>
-                            <small class="text-muted">Nombre: ${nombreMaq}</small> <br> 
-                            <small class="text-muted">Serial: ${serialMaq}</small>
-                        </td>
-                        <td>
-                            <small class="text-muted">Valor: ${valorMaquina}</small> <br> 
-                            <small class="text-muted">Sociedad: ${sociedadMaq}</small>
-                        </td>
-                        <td>
-                            <small class="text-muted">Entrada: ${item.contador_entrada}</small> <br> 
-                            <small class="text-muted">Salida: ${item.contador_salida}</small>
-                        </td>
-                        <td>
-                            <small class="text-muted">Creditos: ${(parseInt(item.contador_entrada) - parseInt(item.contador_salida))}</small> <br> 
-                            <small class="text-muted">Valor: ${((parseInt(item.contador_entrada) - parseInt(item.contador_salida)) * parseFloat(valorMaquina)).toLocaleString('es-ES')}</small>
-                        </td>
-                        <td class="text-center">
-                            <div class="d-flex justify-content-center gap-1">
-                                <button class="btn btn-outline-warning btn-action btn-sm text-dark fw-bold" onclick="abrirModalContadores(${item.id}, ${item.contador_entrada}, ${item.contador_salida})">
-                                    Contadores
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+            <tr>
+                <td>${item.id}</td>
+                <td>
+                    <small class="text-muted">Nombre: ${nombreMaq}</small> <br> 
+                    <small class="text-muted">Serial: ${serialMaq}</small>
+                </td>
+                <td>
+                    <small class="text-muted">Valor: ${valorMaquina}</small> <br> 
+                    <small class="text-muted">Sociedad: ${sociedadMaq}</small>
+                </td>
+                <td>
+                    <small class="text-muted">Entrada: ${entrada}</small> <br> 
+                    <small class="text-muted">Salida: ${salida}</small>
+                </td>
+                <td>
+                    <small class="text-muted">Creditos: ${creditosMaq}</small> <br> 
+                    <small class="text-muted">Valor: ${valorTotalMaq.toLocaleString('es-ES')}</small>
+                </td>
+                <td class="text-center">
+                    <div class="d-flex justify-content-center gap-1">
+                        <button class="btn btn-outline-warning btn-action btn-sm text-dark fw-bold" onclick="abrirModalContadores(${item.id}, ${entrada}, ${salida})">
+                            Contadores
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
                     });
                 }
 
                 htmlTabla += `
-                            </tbody>
-                        </table>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
         `;
 
                 document.getElementById('containerTablasDetalles').innerHTML = htmlTabla;
@@ -2297,7 +2309,7 @@
                     const clasesOriginales = boton.className;
 
                     // Cambiar a estado visual "Copiado"
-                    boton.innerHTML = '✅ ¡Copiado!';
+                    boton.innerHTML = '¡Copiado!';
                     boton.classList.remove('btn-warning', 'btn-primary', 'btn-secondary');
                     boton.classList.add('btn-success');
                     boton.disabled = true;
