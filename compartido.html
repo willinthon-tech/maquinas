@@ -75,7 +75,7 @@
         const API = window.location.origin;
         let maquinasGlobal = [];
 
-        // Función auxiliar inteligente para extraer texto o propiedades anidadas de objetos
+        // Función auxiliar inteligente para extraer texto
         function extraerTexto(val) {
             if (val === null || val === undefined) return '-';
             if (typeof val === 'object') {
@@ -106,33 +106,31 @@
                 const fechaFormateada = partesFecha.length === 3 ? `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}` : rawFecha;
                 const nombreSala = data.header?.sucursal || data.header?.sucursal_nombre || 'N/A';
 
-                // Calcular el total usando .reduce() seguro contra NaN
+                // Calcular el total
                 const totalProduccion = maquinasGlobal.reduce((acc, item) => {
                     const maq = typeof item.info_maquina === 'string' ? JSON.parse(item.info_maquina) : (item.info_maquina || {});
-
                     const creditos = parseInt(item.contador_entrada || 0) - parseInt(item.contador_salida || 0);
 
                     const valorBruto = maq.valor_nom || maq.valor || item.valor || 0;
                     const textoValor = extraerTexto(valorBruto);
 
                     const valorNom = !isNaN(textoValor) ? parseFloat(textoValor) : 0;
-
                     const resultadoMaq = creditos * valorNom;
+
                     return acc + (isNaN(resultadoMaq) ? 0 : resultadoMaq);
                 }, 0);
 
-                const produccionFormateada = (isNaN(totalProduccion) ? 0 : totalProduccion).toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+                // Formateo a 2 decimales
+                const produccionFormateada = (isNaN(totalProduccion) ? 0 : totalProduccion).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                // Lógica de color para el badge Total
-                let badgeTotalClass = 'bg-secondary';
-                if (totalProduccion > 0) badgeTotalClass = 'bg-success';
-                else if (totalProduccion < 0) badgeTotalClass = 'bg-danger';
+                let colorTotalClass = 'text-dark';
+                if (totalProduccion > 0) colorTotalClass = 'text-success';
+                else if (totalProduccion < 0) colorTotalClass = 'text-danger';
 
-                // Pintar cabecera informativa con el Badge
                 document.getElementById('alertFiltrosDetalles').innerHTML =
                     `<i class="bi bi-calendar-event"></i> Fecha: ${fechaFormateada} &nbsp;&nbsp;|&nbsp;&nbsp; 
                      <i class="bi bi-building"></i> Sala: ${nombreSala} &nbsp;&nbsp;|&nbsp;&nbsp; 
-                     Produccion: <span class="badge ${badgeTotalClass} fs-6">${produccionFormateada}</span>`;
+                     Produccion:&nbsp;  <span class="${colorTotalClass}">${produccionFormateada} $</span>`;
 
                 const tbody = document.getElementById('tabla-maquinas');
                 tbody.innerHTML = '';
@@ -156,14 +154,14 @@
                     const numValorMaq = !isNaN(valorMaquina) ? parseFloat(valorMaquina) : 0;
                     const valorTotalMaq = creditosMaq * numValorMaq;
 
-                    // Lógica de colores para los badges de la tabla
-                    let badgeCreditos = 'bg-secondary';
-                    if (creditosMaq > 0) badgeCreditos = 'bg-success';
-                    else if (creditosMaq < 0) badgeCreditos = 'bg-danger';
+                    // Colores SOLO para los números
+                    let colorCreditos = '';
+                    if (creditosMaq > 0) colorCreditos = 'text-success';
+                    else if (creditosMaq < 0) colorCreditos = 'text-danger';
 
-                    let badgeValor = 'bg-secondary';
-                    if (valorTotalMaq > 0) badgeValor = 'bg-success';
-                    else if (valorTotalMaq < 0) badgeValor = 'bg-danger';
+                    let colorValor = '';
+                    if (valorTotalMaq > 0) colorValor = 'text-success';
+                    else if (valorTotalMaq < 0) colorValor = 'text-danger';
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
@@ -181,8 +179,8 @@
                             <small class="text-muted">Salida: ${item.contador_salida || 0}</small>
                         </td>
                         <td>
-                            <small class="text-muted fw-bold">Creditos:</small> <span class="badge ${badgeCreditos}">${creditosMaq}</span> <br> 
-                            <small class="text-muted fw-bold">Valor:</small> <span class="badge ${badgeValor}">${valorTotalMaq.toLocaleString('es-ES')}</span>
+                            <small class="text-muted">Creditos: <span>${creditosMaq}</span></small> <br> 
+                            <small class="text-muted">Valor: <span class="${colorValor}">${valorTotalMaq.toLocaleString('es-ES')} $</span></small>
                         </td>
                         <td class="text-center">
                             <div class="d-flex justify-content-center gap-1">

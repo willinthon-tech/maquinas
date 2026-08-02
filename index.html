@@ -1562,8 +1562,14 @@
                 // Formatear producción total
                 const produccionFormateada = (isNaN(totalProduccion) ? 0 : parseFloat(totalProduccion)).toLocaleString('es-ES');
 
+                let colorTotalClass = 'text-dark';
+                if (totalProduccion > 0) colorTotalClass = 'text-success';
+                else if (totalProduccion < 0) colorTotalClass = 'text-danger';
+
                 document.getElementById('alertFiltrosDetalles').innerHTML =
-                    `<i class="bi bi-calendar-event"></i> Fecha: ${fechaFormateada} &nbsp;&nbsp;|&nbsp;&nbsp; <i class="bi bi-building"></i> Sala: ${nombreSala} |&nbsp;&nbsp; Produccion: ${produccionFormateada}`;
+                    `<i class="bi bi-calendar-event"></i> Fecha: ${fechaFormateada} &nbsp;&nbsp;|&nbsp;&nbsp; 
+                     <i class="bi bi-building"></i> Sala: ${nombreSala} &nbsp;&nbsp;|&nbsp;&nbsp; 
+                     Produccion:&nbsp;  <span class="${colorTotalClass}">${produccionFormateada} $</span>`;
 
                 let htmlTabla = `
     <div class="col-12">
@@ -1604,6 +1610,10 @@
                         const numValorMaq = !isNaN(valorMaquina) ? parseFloat(valorMaquina) : 0;
                         const valorTotalMaq = creditosMaq * numValorMaq;
 
+                        let colorValor = '';
+                        if (valorTotalMaq > 0) colorValor = 'text-success';
+                        else if (valorTotalMaq < 0) colorValor = 'text-danger';
+
                         htmlTabla += `
             <tr>
                 <td>${item.id}</td>
@@ -1620,8 +1630,8 @@
                     <small class="text-muted">Salida: ${salida}</small>
                 </td>
                 <td>
-                    <small class="text-muted">Creditos: ${creditosMaq}</small> <br> 
-                    <small class="text-muted">Valor: ${valorTotalMaq.toLocaleString('es-ES')}</small>
+                    <small class="text-muted">Creditos: <span>${creditosMaq}</span></small> <br> 
+                    <small class="text-muted">Valor: <span class="${colorValor}">${valorTotalMaq.toLocaleString('es-ES')} $</span></small>
                 </td>
                 <td class="text-center">
                     <div class="d-flex justify-content-center gap-1">
